@@ -1,0 +1,32 @@
+<div id="env-var-row-{{ env_var.id }}" class="px-5 py-3 bg-surface-hover">
+  <form hx-put="/api/projects/{{ project.slug }}/env-vars/{{ env_var.id }}"
+        hx-target="#env-var-row-{{ env_var.id }}"
+        hx-swap="outerHTML"
+        hx-ext="json-enc"
+        class="space-y-2">
+    <div class="flex gap-2">
+      <input name="key" value="{{ env_var.key }}"
+             placeholder="VARIABLE_NAME"
+             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-accent focus:outline-none focus:border-accent/60" />
+      <input name="value" value="{{ env_var.value or '' }}"
+             placeholder="valor"
+             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-gray-300 focus:outline-none focus:border-accent/60" />
+    </div>
+    <input name="description" value="{{ env_var.description or '' }}"
+           placeholder="Descripción (opcional)"
+           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
+    <div class="flex gap-2">
+      <button type="submit"
+              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
+        Guardar
+      </button>
+      <button type="button"
+              hx-get="/ui/projects/{{ project.slug }}/env-vars/{{ env_var.id }}/view"
+              hx-target="#env-var-row-{{ env_var.id }}"
+              hx-swap="outerHTML"
+              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+        Cancelar
+      </button>
+    </div>
+  </form>
+</div>

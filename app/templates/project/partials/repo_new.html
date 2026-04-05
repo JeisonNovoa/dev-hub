@@ -1,0 +1,32 @@
+<div id="repo-new" class="border border-surface-border rounded-xl bg-surface-hover p-4">
+  <form hx-post="/ui/projects/{{ slug }}/repos/new"
+        hx-target="#repo-new"
+        hx-swap="outerHTML"
+        class="space-y-2">
+    <div class="flex gap-2">
+      <input name="name" required autofocus
+             placeholder="Nombre del repo (ej: englishcode-ai-chatbot-backend)"
+             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
+    </div>
+    <input name="local_path"
+           placeholder="Ruta local (ej: C:/Users/jeiso/Desktop/englishcode/test_agents-1)"
+           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-gray-400 focus:outline-none focus:border-accent/60" />
+    <input name="github_url" type="url"
+           placeholder="URL de GitHub (opcional)"
+           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
+    <input name="description"
+           placeholder="Descripción breve"
+           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
+    <div class="flex gap-2">
+      <button type="submit"
+              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
+        Agregar repo
+      </button>
+      <button type="button"
+              onclick="this.closest('#repo-new').remove()"
+              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+        Cancelar
+      </button>
+    </div>
+  </form>
+</div>

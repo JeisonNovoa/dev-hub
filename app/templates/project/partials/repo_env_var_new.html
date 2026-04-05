@@ -1,0 +1,29 @@
+<div id="repo-{{ repo_id }}-env-var-new" class="px-5 py-3 bg-surface-hover">
+  <form hx-post="/ui/projects/{{ slug }}/repos/{{ repo_id }}/env-vars/new"
+        hx-target="#repo-{{ repo_id }}-env-var-new"
+        hx-swap="outerHTML"
+        class="space-y-2">
+    <div class="flex gap-2">
+      <input name="key" required autofocus
+             placeholder="VARIABLE_NAME"
+             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-accent focus:outline-none focus:border-accent/60" />
+      <input name="value"
+             placeholder="valor"
+             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-gray-300 focus:outline-none focus:border-accent/60" />
+    </div>
+    <input name="description"
+           placeholder="Descripción (opcional)"
+           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
+    <div class="flex gap-2">
+      <button type="submit"
+              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
+        Agregar
+      </button>
+      <button type="button"
+              onclick="this.closest('[id^=repo-]').remove()"
+              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+        Cancelar
+      </button>
+    </div>
+  </form>
+</div>

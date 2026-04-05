@@ -1,0 +1,35 @@
+<div id="service-new" class="px-5 py-3 bg-surface-hover">
+  <form hx-post="/ui/projects/{{ slug }}/services/new"
+        hx-target="#service-new"
+        hx-swap="outerHTML"
+        class="space-y-2">
+    <div class="flex gap-2">
+      <input name="name" required autofocus
+             placeholder="Ej: OpenAI, ElevenLabs, Cartesia..."
+             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
+      <select name="category"
+              class="bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60">
+        {% for cat in ['ai','auth','storage','db','deploy','messaging','monitoring','other'] %}
+        <option value="{{ cat }}">{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <input name="url" type="url"
+           placeholder="URL del dashboard (opcional)"
+           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
+    <input name="notes"
+           placeholder="Notas (plan, límites, cuenta usada...)"
+           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
+    <div class="flex gap-2">
+      <button type="submit"
+              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
+        Agregar
+      </button>
+      <button type="button"
+              onclick="this.closest('#service-new').remove()"
+              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+        Cancelar
+      </button>
+    </div>
+  </form>
+</div>

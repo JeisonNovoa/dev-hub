@@ -1,0 +1,81 @@
+{% for project in projects %}
+<a href="/projects/{{ project.slug }}"
+   class="block bg-surface-card border-l-2 border border-surface-border rounded-xl p-5 transition-all duration-200 group
+     hover:-translate-y-0.5 hover:bg-surface-hover hover:shadow-lg
+     {% if project.status == 'active' %}border-l-accent
+     {% elif project.status == 'paused' %}border-l-yellow-500
+     {% else %}border-l-gray-600{% endif %}"
+   style="{% if project.status == 'active' %}--tw-shadow-color: rgba(34,197,94,0.08);{% elif project.status == 'paused' %}--tw-shadow-color: rgba(234,179,8,0.06);{% endif %}">
+
+  <!-- Header -->
+  <div class="flex items-start justify-between mb-3">
+    <h3 class="font-mono font-semibold text-gray-100 group-hover:text-accent transition-colors truncate mr-2 text-sm">
+      {{ project.name }}
+    </h3>
+    <!-- Status badge -->
+    <span class="shrink-0 text-xs px-2 py-0.5 rounded font-mono font-medium
+      {% if project.status == 'active' %}bg-accent/10 text-accent border border-accent/20
+      {% elif project.status == 'paused' %}bg-yellow-500/10 text-yellow-400 border border-yellow-500/20
+      {% else %}bg-gray-800/60 text-gray-500 border border-gray-700{% endif %}">
+      {% if project.status == 'active' %}● active
+      {% elif project.status == 'paused' %}⏸ paused
+      {% else %}— archived{% endif %}
+    </span>
+  </div>
+
+  <!-- Description -->
+  {% if project.description %}
+  <p class="text-sm text-gray-400 mb-4 line-clamp-2 leading-relaxed">{{ project.description }}</p>
+  {% endif %}
+
+  <!-- Tech stack -->
+  {% if project.tech_stack %}
+  <div class="flex flex-wrap gap-1.5 mb-3">
+    {% for tech in project.tech_stack %}
+    <span class="text-xs px-2 py-0.5 rounded font-mono bg-surface border border-surface-border text-gray-500 group-hover:border-accent/20 transition-colors">
+      {{ tech }}
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Contadores -->
+  {% set total_cmds = project.commands | length %}
+  {% set total_envs = project.env_vars | length %}
+  {% set total_repos = project.repos | length %}
+  {% set total_links = project.links | length %}
+  {% if total_repos or total_cmds or total_envs or total_links %}
+  <div class="flex flex-wrap gap-x-3 gap-y-1 mt-auto pt-3 border-t border-surface-border/60">
+    {% if total_repos %}
+    <span class="text-xs text-gray-600 font-mono">{{ total_repos }} repo{% if total_repos != 1 %}s{% endif %}</span>
+    {% endif %}
+    {% if total_cmds %}
+    <span class="text-xs text-gray-600 font-mono">{{ total_cmds }} cmd{% if total_cmds != 1 %}s{% endif %}</span>
+    {% endif %}
+    {% if total_envs %}
+    <span class="text-xs text-gray-600 font-mono">{{ total_envs }} env var{% if total_envs != 1 %}s{% endif %}</span>
+    {% endif %}
+    {% if total_links %}
+    <span class="text-xs text-gray-600 font-mono">{{ total_links }} link{% if total_links != 1 %}s{% endif %}</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</a>
+
+{% else %}
+<!-- Empty state -->
+<div class="col-span-full flex flex-col items-center justify-center py-20 text-center">
+  <div class="w-12 h-12 rounded-xl bg-surface-card border border-surface-border flex items-center justify-center mb-4">
+    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+        d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  </div>
+  <p class="text-gray-300 font-medium mb-1">Sin proyectos aún</p>
+  <p class="text-sm text-gray-600 mb-5">Crea tu primer proyecto para centralizar comandos, env vars y links.</p>
+  <button onclick="document.getElementById('new-project-modal').classList.remove('hidden')"
+          class="text-sm px-4 py-2 rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors font-medium">
+    + Crear primer proyecto
+  </button>
+</div>
+{% endfor %}

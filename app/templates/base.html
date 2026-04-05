@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Dev Hub{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+
+  <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
+  <script src="https://unpkg.com/@alpinejs/collapse@3.14.3/dist/cdn.min.js" defer></script>
+  <script src="https://unpkg.com/alpinejs@3.14.3/dist/cdn.min.js" defer></script>
+</head>
+
+<body class="bg-surface text-gray-100 min-h-screen antialiased font-sans"
+      x-data="{ flash: null }"
+      @show-flash.window="flash = $event.detail; setTimeout(() => flash = null, 3000)">
+
+  <!-- Nav -->
+  <nav class="border-b border-surface-border bg-surface-card">
+    <div class="container mx-auto px-4 flex items-center justify-between h-14">
+      <a href="/" class="flex items-center gap-2 font-mono font-bold text-accent tracking-tight text-base">
+        <span class="text-accent opacity-80 font-mono text-lg leading-none">▸</span>
+        dev-hub
+      </a>
+      <div class="flex items-center gap-1 text-sm text-gray-400">
+        <a href="/"
+           class="px-3 py-1.5 rounded-md transition-colors hover:text-gray-100
+             {% if request.url.path == '/' %}text-gray-100 bg-surface border border-surface-border{% endif %}">
+          Proyectos
+        </a>
+        <a href="/credentials"
+           class="px-3 py-1.5 rounded-md transition-colors hover:text-gray-100
+             {% if '/credentials' in request.url.path %}text-gray-100 bg-surface border border-surface-border{% endif %}">
+          Credenciales
+        </a>
+        <a href="/search"
+           class="px-3 py-1.5 rounded-md transition-colors hover:text-gray-100
+             {% if '/search' in request.url.path %}text-gray-100 bg-surface border border-surface-border{% endif %}">
+          Buscar
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Flash notification -->
+  <div x-cloak x-show="flash" x-transition
+       class="fixed top-4 right-4 z-50 px-4 py-3 rounded-lg text-sm font-medium shadow-lg"
+       :class="flash?.type === 'error' ? 'bg-red-900 text-red-200' : 'bg-green-900 text-green-200'"
+       x-text="flash?.message">
+  </div>
+
+  <!-- Main content -->
+  <main class="container mx-auto px-4 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+</body>
+</html>

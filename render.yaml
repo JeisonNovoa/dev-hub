@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: dev-hub
+    runtime: python
+    buildCommand: npm ci && npm run build:css && pip install -r requirements.txt && alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:////data/dev_hub.db   # disco persistente — cambiar a PostgreSQL URL si prefieres
+        # Para PostgreSQL (Neon / Supabase): postgresql+psycopg2://user:pass@host/dbname
+      - key: APP_NAME
+        value: Dev Hub
+      - key: DEBUG
+        value: false
+        # true → queries SQL visibles en logs (solo para depurar)
+      - key: ENCRYPTION_KEY
+        sync: false   # Genera una con: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    disk:
+      name: sqlite-data
+      mountPath: /data
+      sizeGB: 1

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Buscar — Dev Hub{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <h1 class="text-lg font-mono font-semibold text-gray-100 mb-4">buscar/</h1>
+  <div class="relative">
+    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none"
+         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+    <input
+      type="search"
+      name="q"
+      value="{{ q }}"
+      placeholder="buscar en proyectos, credenciales, servicios y links..."
+      autofocus
+      class="w-full bg-surface-card border border-surface-border rounded-xl pl-11 pr-4 py-3 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/40 transition-colors"
+      hx-get="/search"
+      hx-trigger="input changed delay:350ms"
+      hx-target="#search-results"
+      hx-swap="innerHTML"
+    />
+  </div>
+</div>
+
+<div id="search-results">
+  {% if q %}
+    {% set total = results.projects|length + results.credentials|length + results.services|length + results.links|length %}
+    {% if total == 0 %}
+    <div class="flex flex-col items-center justify-center py-16 text-center">
+      <svg class="w-10 h-10 text-gray-700 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <p class="text-gray-500 text-sm">Sin resultados para <span class="font-mono text-gray-400">"{{ q }}"</span></p>
+    </div>
+    {% else %}
+
+    {% if results.projects %}
+    <section class="mb-6">
+      <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest mb-3">
+        <span class="text-accent opacity-60">▸</span>
+        proyectos <span class="text-gray-700 normal-case font-normal">({{ results.projects|length }})</span>
+      </h2>
+      <div class="space-y-2">
+        {% for p in results.projects %}
+        <a href="/projects/{{ p.slug }}"
+           class="flex items-center justify-between bg-surface-card border-l-2 border border-surface-border border-l-accent/40 rounded-lg px-4 py-3 hover:border-l-accent hover:bg-surface-hover transition-all duration-150 group">
+          <span class="text-gray-100 text-sm font-mono group-hover:text-accent transition-colors">{{ p.name }}</span>
+          <span class="text-xs text-gray-600 font-mono">{{ p.tech_stack | join(', ') }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if results.credentials %}
+    <section class="mb-6">
+      <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest mb-3">
+        <span class="text-accent opacity-60">▸</span>
+        credenciales <span class="text-gray-700 normal-case font-normal">({{ results.credentials|length }})</span>
+      </h2>
+      <div class="space-y-2">
+        {% for c in results.credentials %}
+        <a href="/credentials"
+           class="flex items-center justify-between bg-surface-card border border-surface-border rounded-lg px-4 py-3 hover:border-accent/30 hover:bg-surface-hover transition-all duration-150">
+          <span class="text-gray-100 text-sm">{{ c.label }}</span>
+          <span class="text-xs text-gray-600 font-mono">{{ c.username or '' }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if results.services %}
+    <section class="mb-6">
+      <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest mb-3">
+        <span class="text-accent opacity-60">▸</span>
+        servicios <span class="text-gray-700 normal-case font-normal">({{ results.services|length }})</span>
+      </h2>
+      <div class="space-y-2">
+        {% for s in results.services %}
+        <div class="flex items-center justify-between bg-surface-card border border-surface-border rounded-lg px-4 py-3 hover:bg-surface-hover transition-colors">
+          <span class="text-gray-100 text-sm">{{ s.name }}</span>
+          {% if s.url %}
+          <a href="{{ s.url }}" target="_blank" rel="noopener"
+             class="text-accent text-xs hover:underline font-mono" @click.stop>
+            {{ s.url | truncate(40) }}
+          </a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if results.links %}
+    <section class="mb-6">
+      <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest mb-3">
+        <span class="text-accent opacity-60">▸</span>
+        links <span class="text-gray-700 normal-case font-normal">({{ results.links|length }})</span>
+      </h2>
+      <div class="space-y-2">
+        {% for l in results.links %}
+        <a href="{{ l.url }}" target="_blank" rel="noopener"
+           class="flex items-center justify-between bg-surface-card border border-surface-border rounded-lg px-4 py-3 hover:border-accent/30 hover:bg-surface-hover transition-all duration-150">
+          <span class="text-gray-100 text-sm">{{ l.label }}</span>
+          <span class="text-xs text-accent font-mono">{{ l.url | truncate(40) }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% endif %}
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-16 text-center">
+    <svg class="w-10 h-10 text-gray-700 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+    <p class="text-sm text-gray-600">Escribe para buscar en toda la app.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

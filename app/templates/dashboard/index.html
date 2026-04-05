@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Proyectos — Dev Hub{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+  <h1 class="text-lg font-mono font-semibold text-gray-100">proyectos/</h1>
+
+  <button onclick="document.getElementById('new-project-modal').classList.remove('hidden')"
+          class="text-sm px-4 py-2 rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 font-medium transition-colors">
+    + nuevo proyecto
+  </button>
+</div>
+
+<!-- Filtros -->
+<div class="flex flex-col sm:flex-row gap-3 mb-6" x-data>
+  <input
+    type="search"
+    name="q"
+    value="{{ q }}"
+    placeholder="buscar proyectos..."
+    class="flex-1 bg-surface-card border border-surface-border rounded-lg px-4 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/40 transition-colors font-sans"
+    hx-get="/ui/dashboard/cards"
+    hx-trigger="input changed delay:300ms"
+    hx-target="#project-grid"
+    hx-swap="innerHTML"
+    hx-include="[name='status-filter']"
+  />
+  <select
+    name="status-filter"
+    class="bg-surface-card border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-accent/40 transition-colors"
+    hx-get="/ui/dashboard/cards"
+    hx-trigger="change"
+    hx-target="#project-grid"
+    hx-swap="innerHTML"
+    hx-include="[name='q']">
+    <option value="" {% if not status_filter %}selected{% endif %}>todos</option>
+    <option value="active"   {% if status_filter == 'active' %}selected{% endif %}>● activos</option>
+    <option value="paused"   {% if status_filter == 'paused' %}selected{% endif %}>⏸ pausados</option>
+    <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>— archivados</option>
+  </select>
+</div>
+
+<!-- Grid de proyectos -->
+<div id="project-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% include "partials/project_cards.html" %}
+</div>
+
+<!-- Modal nuevo proyecto -->
+<div id="new-project-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+     x-data @click.self="$el.classList.add('hidden')">
+  <div class="bg-surface-card border border-surface-border rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
+    <h2 class="text-base font-mono font-semibold text-gray-100 mb-5">nuevo proyecto</h2>
+    <form hx-post="/ui/projects/new" class="space-y-4">
+      <div>
+        <label class="block text-xs font-mono text-gray-500 mb-1.5">nombre *</label>
+        <input name="name" required placeholder="mi-proyecto"
+               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors font-mono" />
+      </div>
+      <div>
+        <label class="block text-xs font-mono text-gray-500 mb-1.5">descripción</label>
+        <input name="description" placeholder="Breve descripción del proyecto..."
+               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+      </div>
+      <div>
+        <label class="block text-xs font-mono text-gray-500 mb-1.5">tech stack <span class="text-gray-600">(separado por comas)</span></label>
+        <input name="tech_stack_raw" placeholder="FastAPI, React, PostgreSQL"
+               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+      </div>
+      <div class="flex gap-3 pt-1">
+        <button type="submit"
+                class="flex-1 py-2 rounded-lg bg-accent hover:bg-accent-dim text-white text-sm font-medium transition-colors">
+          Crear
+        </button>
+        <button type="button"
+                onclick="document.getElementById('new-project-modal').classList.add('hidden')"
+                class="flex-1 py-2 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 text-sm transition-colors">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

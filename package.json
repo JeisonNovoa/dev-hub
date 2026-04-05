@@ -1,0 +1,19 @@
+{
+  "name": "dev-hub",
+  "version": "1.0.0",
+  "description": "Hub personal de desarrollo — reemplaza Notion + Bitwarden con una sola app web propia, sin fricción, sin pago, sin auth.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build:css": "tailwindcss -i app/static/input.css -o app/static/style.css --minify",
+    "watch:css": "tailwindcss -i app/static/input.css -o app/static/style.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

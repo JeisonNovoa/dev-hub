@@ -1,0 +1,39 @@
+<div id="cmd-row-{{ cmd.id }}" class="px-5 py-3 bg-surface-hover">
+  <form hx-put="/api/projects/{{ project.slug }}/commands/{{ cmd.id }}"
+        hx-target="#cmd-row-{{ cmd.id }}"
+        hx-swap="outerHTML"
+        hx-ext="json-enc"
+        class="space-y-2">
+    <div class="flex gap-2">
+      <input name="label" value="{{ cmd.label }}"
+             placeholder="Etiqueta"
+             class="w-1/3 bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
+      <input name="order" type="number" value="{{ cmd.order }}"
+             placeholder="Orden"
+             class="w-16 bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
+      <select name="type"
+              class="bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60">
+        <option value="start"     {% if cmd.type == 'start' %}selected{% endif %}>inicio</option>
+        <option value="migration" {% if cmd.type == 'migration' %}selected{% endif %}>migración</option>
+        <option value="build"     {% if cmd.type == 'build' %}selected{% endif %}>build</option>
+        <option value="other"     {% if cmd.type == 'other' %}selected{% endif %}>otro</option>
+      </select>
+    </div>
+    <textarea name="command"
+              rows="2"
+              class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-green-400 focus:outline-none focus:border-accent/60 resize-none">{{ cmd.command }}</textarea>
+    <div class="flex gap-2">
+      <button type="submit"
+              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
+        Guardar
+      </button>
+      <button type="button"
+              hx-get="/ui/projects/{{ project.slug }}/commands/{{ cmd.id }}/view"
+              hx-target="#cmd-row-{{ cmd.id }}"
+              hx-swap="outerHTML"
+              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+        Cancelar
+      </button>
+    </div>
+  </form>
+</div>

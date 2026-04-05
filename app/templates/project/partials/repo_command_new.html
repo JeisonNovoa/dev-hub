@@ -1,0 +1,29 @@
+<div id="repo-{{ repo_id }}-cmd-new-{{ type }}" class="px-5 py-3 bg-surface-hover">
+  <form hx-post="/ui/projects/{{ slug }}/repos/{{ repo_id }}/commands/new"
+        hx-target="#repo-{{ repo_id }}-cmd-new-{{ type }}"
+        hx-swap="outerHTML"
+        class="space-y-2">
+    <input type="hidden" name="type" value="{{ type }}" />
+    <div class="flex gap-2">
+      <input name="label" required autofocus
+             placeholder="Etiqueta"
+             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
+      <input name="order" type="number" value="0"
+             class="w-12 bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
+    </div>
+    <textarea name="command" required rows="2"
+              placeholder="uvicorn app.main:app --reload"
+              class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-green-400 focus:outline-none focus:border-accent/60 resize-none"></textarea>
+    <div class="flex gap-2">
+      <button type="submit"
+              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
+        Agregar
+      </button>
+      <button type="button"
+              onclick="this.closest('[id^=repo-]').remove()"
+              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+        Cancelar
+      </button>
+    </div>
+  </form>
+</div>

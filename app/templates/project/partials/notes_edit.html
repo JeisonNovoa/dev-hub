@@ -1,0 +1,29 @@
+<div id="notes-section" class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+  <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
+    <h2 class="text-sm font-semibold text-gray-300">Notas</h2>
+    <span class="text-xs text-gray-600">Markdown soportado</span>
+  </div>
+  <div class="p-4">
+    <form hx-post="/ui/projects/{{ project.slug }}/notes/save"
+          hx-target="#notes-section"
+          hx-swap="outerHTML"
+          class="space-y-3">
+      <textarea name="notes" rows="10"
+                placeholder="# Arquitectura&#10;&#10;Escribe aquí tus notas en markdown...&#10;&#10;## Comandos útiles&#10;&#10;```bash&#10;uvicorn app.main:app --reload&#10;```"
+                class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 font-mono focus:outline-none focus:border-accent/60 resize-y">{{ project.notes or '' }}</textarea>
+      <div class="flex gap-2">
+        <button type="submit"
+                class="text-xs px-4 py-1.5 rounded-lg bg-accent hover:bg-accent-dim text-white font-medium transition-colors">
+          Guardar
+        </button>
+        <button type="button"
+                hx-get="/ui/projects/{{ project.slug }}/notes/view"
+                hx-target="#notes-section"
+                hx-swap="outerHTML"
+                class="text-xs px-4 py-1.5 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} — Dev Hub{% endblock %}
+
+{% block content %}
+<!-- Header del proyecto -->
+<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+  <div class="flex-1">
+    <div class="flex items-center gap-3 mb-2">
+      <a href="/" class="text-gray-600 hover:text-gray-300 text-sm transition-colors flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        proyectos
+      </a>
+    </div>
+    {% include "project/partials/project_header.html" %}
+  </div>
+
+  <!-- Status selector -->
+  <div class="flex items-center gap-2 shrink-0">
+    <select
+      id="status-select"
+      class="bg-surface-card border border-surface-border rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:border-accent/40 transition-colors
+        {% if project.status == 'active' %}text-accent
+        {% elif project.status == 'paused' %}text-yellow-400
+        {% else %}text-gray-500{% endif %}"
+      hx-patch="/api/projects/{{ project.slug }}"
+      hx-vals='js:{status: event.target.value}'
+      hx-swap="none">
+      <option value="active"   {% if project.status == 'active' %}selected{% endif %}>● activo</option>
+      <option value="paused"   {% if project.status == 'paused' %}selected{% endif %}>⏸ pausado</option>
+      <option value="archived" {% if project.status == 'archived' %}selected{% endif %}>— archivado</option>
+    </select>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Columna izquierda -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Repositorios -->
+    {% if project.repos %}
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
+          <span class="text-accent opacity-60">▸</span>
+          repositorios
+        </h2>
+        <button
+          hx-get="/ui/projects/{{ project.slug }}/repos/new"
+          hx-target="#repos-list"
+          hx-swap="beforeend"
+          class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
+          + agregar
+        </button>
+      </div>
+      <div id="repos-list" class="space-y-3">
+        {% for repo in project.repos %}
+        {% include "project/partials/repo_card.html" %}
+        {% endfor %}
+        {% if not project.repos %}
+        <p class="text-sm text-gray-600 py-2">Sin repositorios. Agrégalos para organizar comandos y env vars por repo.</p>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Links rápidos -->
+    <section class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
+        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
+          <span class="text-accent opacity-60">▸</span>
+          links
+        </h2>
+        <button
+          hx-get="/ui/projects/{{ project.slug }}/links/new"
+          hx-target="#links-list"
+          hx-swap="beforeend"
+          class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
+          + agregar
+        </button>
+      </div>
+      <div id="links-list" class="divide-y divide-surface-border">
+        {% for link in project.links %}
+        {% include "project/partials/link_row.html" %}
+        {% endfor %}
+        {% if not project.links %}
+        <p class="px-5 py-5 text-sm text-gray-600">Sin links aún.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Notes -->
+    {% include "project/partials/notes_view.html" %}
+
+  </div>
+
+  <!-- Columna derecha -->
+  <div class="space-y-6">
+
+    <!-- Servicios externos -->
+    <section class="bg-surface-card border border-surface-border rounded-xl overflow-hidden"
+             x-data="{ open: true }">
+      <div class="flex items-center justify-between px-5 py-3 cursor-pointer select-none hover:bg-surface-hover transition-colors"
+           :class="open ? 'border-b border-surface-border' : ''"
+           @click="open = !open">
+        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
+          <svg class="w-3 h-3 text-gray-600 transition-transform duration-200 shrink-0"
+               :class="open ? 'rotate-90' : ''"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+          servicios
+        </h2>
+        <button x-show="open"
+                hx-get="/ui/projects/{{ project.slug }}/services/new"
+                hx-target="#services-list"
+                hx-swap="beforeend"
+                @click.stop
+                class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
+          + agregar
+        </button>
+      </div>
+      <div x-show="open" x-collapse>
+        <div id="services-list" class="divide-y divide-surface-border">
+          {% for service in project.services %}
+          {% include "project/partials/service_row.html" %}
+          {% endfor %}
+          {% if not project.services %}
+          <p class="px-5 py-5 text-sm text-gray-600">Sin servicios aún.</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- Credenciales del proyecto -->
+    <section class="bg-surface-card border border-surface-border rounded-xl overflow-hidden"
+             x-data="{ open: true }">
+      <div class="flex items-center justify-between px-5 py-3 cursor-pointer select-none hover:bg-surface-hover transition-colors"
+           :class="open ? 'border-b border-surface-border' : ''"
+           @click="open = !open">
+        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
+          <svg class="w-3 h-3 text-gray-600 transition-transform duration-200 shrink-0"
+               :class="open ? 'rotate-90' : ''"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+          credenciales
+        </h2>
+        <button x-show="open"
+                hx-get="/ui/projects/{{ project.slug }}/credentials/new"
+                hx-target="#proj-credentials-list"
+                hx-swap="beforeend"
+                @click.stop
+                class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
+          + agregar
+        </button>
+      </div>
+      <div x-show="open" x-collapse>
+        <div id="proj-credentials-list" class="divide-y divide-surface-border">
+          {% for cred in project.credentials %}
+          {% include "project/partials/credential_item.html" %}
+          {% endfor %}
+          {% if not project.credentials %}
+          <p class="px-5 py-5 text-sm text-gray-600">Sin credenciales vinculadas.</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+</div>
+{% endblock %}

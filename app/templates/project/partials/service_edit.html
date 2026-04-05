@@ -1,0 +1,38 @@
+<div id="service-row-{{ service.id }}" class="px-5 py-3 bg-surface-hover">
+  <form hx-put="/api/services/{{ service.id }}"
+        hx-target="#service-row-{{ service.id }}"
+        hx-swap="outerHTML"
+        hx-ext="json-enc"
+        class="space-y-2">
+    <div class="flex gap-2">
+      <input name="name" value="{{ service.name }}" required
+             placeholder="Nombre del servicio"
+             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
+      <select name="category"
+              class="bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60">
+        {% for cat in ['ai','auth','storage','db','deploy','messaging','monitoring','other'] %}
+        <option value="{{ cat }}" {% if service.category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <input name="url" value="{{ service.url or '' }}" type="url"
+           placeholder="https://dashboard.openai.com"
+           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
+    <input name="notes" value="{{ service.notes or '' }}"
+           placeholder="Notas (plan, cuenta, límites...)"
+           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
+    <div class="flex gap-2">
+      <button type="submit"
+              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
+        Guardar
+      </button>
+      <button type="button"
+              hx-get="/ui/projects/{{ project.slug }}/services/{{ service.id }}/view"
+              hx-target="#service-row-{{ service.id }}"
+              hx-swap="outerHTML"
+              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+        Cancelar
+      </button>
+    </div>
+  </form>
+</div>
