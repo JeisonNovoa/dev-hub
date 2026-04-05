@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.logging_config import configure_logging
 from app.routers.api import commands, credentials, env_vars, export, links, projects, repos, services
+from app.routers.ui import auth as ui_auth
 from app.routers.ui import credentials as ui_credentials
 from app.routers.ui import dashboard, project_detail, search
 
@@ -18,6 +19,9 @@ app = FastAPI(title=settings.app_name)
 logger.info("Iniciando %s", settings.app_name)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Auth — rutas públicas (login, register, logout)
+app.include_router(ui_auth.router)
 
 # API routers — devuelven JSON
 app.include_router(projects.router, prefix="/api/projects", tags=["projects"])

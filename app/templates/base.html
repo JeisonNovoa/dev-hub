@@ -28,6 +28,7 @@
         dev-hub
       </a>
       <div class="flex items-center gap-1 text-sm text-gray-400">
+        {% if current_user %}
         <a href="/"
            class="px-3 py-1.5 rounded-md transition-colors hover:text-gray-100
              {% if request.url.path == '/' %}text-gray-100 bg-surface border border-surface-border{% endif %}">
@@ -43,6 +44,15 @@
              {% if '/search' in request.url.path %}text-gray-100 bg-surface border border-surface-border{% endif %}">
           Buscar
         </a>
+        <span class="mx-2 text-surface-border">|</span>
+        <span class="text-xs text-gray-500 mr-1">{{ current_user.email }}</span>
+        <form method="post" action="/logout" class="inline">
+          <button type="submit"
+                  class="px-3 py-1.5 rounded-md transition-colors hover:text-gray-100 hover:bg-surface border border-transparent hover:border-surface-border">
+            Salir
+          </button>
+        </form>
+        {% endif %}
       </div>
     </div>
   </nav>

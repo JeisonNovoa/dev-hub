@@ -3,8 +3,8 @@ from slugify import slugify
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_project_or_404
-from app.models import Command, EnvVariable, Repo
+from app.dependencies import get_current_user, get_project_or_404
+from app.models import Command, EnvVariable, Repo, User
 from app.schemas.project import CommandCreate, CommandResponse, CommandUpdate, EnvVariableCreate, EnvVariableResponse, EnvVariableUpdate
 from app.schemas.repo import RepoCreate, RepoDetailResponse, RepoResponse, RepoUpdate
 
@@ -19,14 +19,23 @@ def _get_repo_or_404(project_id: int, repo_slug: str, db: Session) -> Repo:
 
 
 @router.get("", response_model=list[RepoResponse])
-def list_repos(slug: str, db: Session = Depends(get_db)) -> list[Repo]:
-    project = get_project_or_404(slug, db)
+def list_repos(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[Repo]:
+    project = get_project_or_404(slug, db, current_user)
     return db.query(Repo).filter(Repo.project_id == project.id).order_by(Repo.name).all()
 
 
 @router.post("", response_model=RepoResponse, status_code=status.HTTP_201_CREATED)
-def create_repo(slug: str, data: RepoCreate, db: Session = Depends(get_db)) -> Repo:
-    project = get_project_or_404(slug, db)
+def create_repo(
+    slug: str,
+    data: RepoCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Repo:
+    project = get_project_or_404(slug, db, current_user)
     repo_slug = data.slug or slugify(data.name)
     existing = db.query(Repo).filter(Repo.project_id == project.id, Repo.slug == repo_slug).first()
     if existing:
@@ -46,14 +55,25 @@ def create_repo(slug: str, data: RepoCreate, db: Session = Depends(get_db)) -> R
 
 
 @router.get("/{repo_slug}", response_model=RepoDetailResponse)
-def get_repo(slug: str, repo_slug: str, db: Session = Depends(get_db)) -> Repo:
-    project = get_project_or_404(slug, db)
+def get_repo(
+    slug: str,
+    repo_slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Repo:
+    project = get_project_or_404(slug, db, current_user)
     return _get_repo_or_404(project.id, repo_slug, db)
 
 
 @router.put("/{repo_slug}", response_model=RepoResponse)
-def update_repo(slug: str, repo_slug: str, data: RepoUpdate, db: Session = Depends(get_db)) -> Repo:
-    project = get_project_or_404(slug, db)
+def update_repo(
+    slug: str,
+    repo_slug: str,
+    data: RepoUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Repo:
+    project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(repo, field, value)
@@ -63,8 +83,13 @@ def update_repo(slug: str, repo_slug: str, data: RepoUpdate, db: Session = Depen
 
 
 @router.delete("/{repo_slug}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_repo(slug: str, repo_slug: str, db: Session = Depends(get_db)) -> None:
-    project = get_project_or_404(slug, db)
+def delete_repo(
+    slug: str,
+    repo_slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
     db.delete(repo)
     db.commit()
@@ -73,8 +98,14 @@ def delete_repo(slug: str, repo_slug: str, db: Session = Depends(get_db)) -> Non
 # ---- Comandos del repo ----
 
 @router.post("/{repo_slug}/commands", response_model=CommandResponse, status_code=status.HTTP_201_CREATED)
-def create_repo_command(slug: str, repo_slug: str, data: CommandCreate, db: Session = Depends(get_db)) -> Command:
-    project = get_project_or_404(slug, db)
+def create_repo_command(
+    slug: str,
+    repo_slug: str,
+    data: CommandCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Command:
+    project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
     cmd = Command(
         project_id=project.id,
@@ -91,8 +122,15 @@ def create_repo_command(slug: str, repo_slug: str, data: CommandCreate, db: Sess
 
 
 @router.put("/{repo_slug}/commands/{cmd_id}", response_model=CommandResponse)
-def update_repo_command(slug: str, repo_slug: str, cmd_id: int, data: CommandUpdate, db: Session = Depends(get_db)) -> Command:
-    project = get_project_or_404(slug, db)
+def update_repo_command(
+    slug: str,
+    repo_slug: str,
+    cmd_id: int,
+    data: CommandUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Command:
+    project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
     cmd = db.query(Command).filter(Command.id == cmd_id, Command.repo_id == repo.id).first()
     if not cmd:
@@ -105,8 +143,14 @@ def update_repo_command(slug: str, repo_slug: str, cmd_id: int, data: CommandUpd
 
 
 @router.delete("/{repo_slug}/commands/{cmd_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_repo_command(slug: str, repo_slug: str, cmd_id: int, db: Session = Depends(get_db)) -> None:
-    project = get_project_or_404(slug, db)
+def delete_repo_command(
+    slug: str,
+    repo_slug: str,
+    cmd_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
     cmd = db.query(Command).filter(Command.id == cmd_id, Command.repo_id == repo.id).first()
     if not cmd:
@@ -118,8 +162,14 @@ def delete_repo_command(slug: str, repo_slug: str, cmd_id: int, db: Session = De
 # ---- Env vars del repo ----
 
 @router.post("/{repo_slug}/env-vars", response_model=EnvVariableResponse, status_code=status.HTTP_201_CREATED)
-def create_repo_env_var(slug: str, repo_slug: str, data: EnvVariableCreate, db: Session = Depends(get_db)) -> EnvVariable:
-    project = get_project_or_404(slug, db)
+def create_repo_env_var(
+    slug: str,
+    repo_slug: str,
+    data: EnvVariableCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> EnvVariable:
+    project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
     env_var = EnvVariable(
         project_id=project.id,
@@ -135,8 +185,15 @@ def create_repo_env_var(slug: str, repo_slug: str, data: EnvVariableCreate, db: 
 
 
 @router.put("/{repo_slug}/env-vars/{env_id}", response_model=EnvVariableResponse)
-def update_repo_env_var(slug: str, repo_slug: str, env_id: int, data: EnvVariableUpdate, db: Session = Depends(get_db)) -> EnvVariable:
-    project = get_project_or_404(slug, db)
+def update_repo_env_var(
+    slug: str,
+    repo_slug: str,
+    env_id: int,
+    data: EnvVariableUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> EnvVariable:
+    project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
     env_var = db.query(EnvVariable).filter(EnvVariable.id == env_id, EnvVariable.repo_id == repo.id).first()
     if not env_var:
@@ -149,8 +206,14 @@ def update_repo_env_var(slug: str, repo_slug: str, env_id: int, data: EnvVariabl
 
 
 @router.delete("/{repo_slug}/env-vars/{env_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_repo_env_var(slug: str, repo_slug: str, env_id: int, db: Session = Depends(get_db)) -> None:
-    project = get_project_or_404(slug, db)
+def delete_repo_env_var(
+    slug: str,
+    repo_slug: str,
+    env_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
     env_var = db.query(EnvVariable).filter(EnvVariable.id == env_id, EnvVariable.repo_id == repo.id).first()
     if not env_var:

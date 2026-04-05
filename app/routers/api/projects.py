@@ -1,12 +1,12 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slugify import slugify
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_project_or_404
-from app.models import Project
+from app.dependencies import get_current_user, get_project_or_404
+from app.models import Project, User
 from app.schemas.project import ProjectCreate, ProjectDetailResponse, ProjectResponse, ProjectUpdate
 
 router = APIRouter()
@@ -14,15 +14,23 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("", response_model=list[ProjectResponse])
-def list_projects(status: str | None = None, db: Session = Depends(get_db)) -> list[Project]:
-    query = db.query(Project)
+def list_projects(
+    status: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[Project]:
+    query = db.query(Project).filter(Project.user_id == current_user.id)
     if status:
         query = query.filter(Project.status == status)
     return query.order_by(Project.name).all()
 
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
-def create_project(data: ProjectCreate, db: Session = Depends(get_db)) -> Project:
+def create_project(
+    data: ProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Project:
     slug = data.slug or slugify(data.name)
     existing = db.query(Project).filter(Project.slug == slug).first()
     if existing:
@@ -35,6 +43,7 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db)) -> Projec
         tech_stack=data.tech_stack,
         status=data.status,
         notes=data.notes,
+        user_id=current_user.id,
     )
     db.add(project)
     db.commit()
@@ -44,13 +53,22 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db)) -> Projec
 
 
 @router.get("/{slug}", response_model=ProjectDetailResponse)
-def get_project(slug: str, db: Session = Depends(get_db)) -> Project:
-    return get_project_or_404(slug, db)
+def get_project(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Project:
+    return get_project_or_404(slug, db, current_user)
 
 
 @router.put("/{slug}", response_model=ProjectResponse)
-def update_project(slug: str, data: ProjectUpdate, db: Session = Depends(get_db)) -> Project:
-    project = get_project_or_404(slug, db)
+def update_project(
+    slug: str,
+    data: ProjectUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Project:
+    project = get_project_or_404(slug, db, current_user)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(project, field, value)
     db.commit()
@@ -59,13 +77,22 @@ def update_project(slug: str, data: ProjectUpdate, db: Session = Depends(get_db)
 
 
 @router.patch("/{slug}", response_model=ProjectResponse)
-def patch_project(slug: str, data: ProjectUpdate, db: Session = Depends(get_db)) -> Project:
-    return update_project(slug, data, db)
+def patch_project(
+    slug: str,
+    data: ProjectUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Project:
+    return update_project(slug, data, db, current_user)
 
 
 @router.delete("/{slug}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(slug: str, db: Session = Depends(get_db)) -> None:
-    project = get_project_or_404(slug, db)
+def delete_project(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    project = get_project_or_404(slug, db, current_user)
     db.delete(project)
     db.commit()
     logger.info("Proyecto eliminado: '%s'", slug)

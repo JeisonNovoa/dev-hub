@@ -6,16 +6,23 @@ from slugify import slugify
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import get_current_user
 from app.jinja import templates
-from app.models import Project
+from app.models import Project, User
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 @router.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, q: str = "", status: str = "", db: Session = Depends(get_db)) -> HTMLResponse:
-    query = db.query(Project)
+def dashboard(
+    request: Request,
+    q: str = "",
+    status: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    query = db.query(Project).filter(Project.user_id == current_user.id)
     if status:
         query = query.filter(Project.status == status)
     if q:
@@ -24,7 +31,7 @@ def dashboard(request: Request, q: str = "", status: str = "", db: Session = Dep
     projects = query.order_by(Project.name).all()
     return templates.TemplateResponse(
         "dashboard/index.html",
-        {"request": request, "projects": projects, "q": q, "status_filter": status},
+        {"request": request, "projects": projects, "q": q, "status_filter": status, "current_user": current_user},
     )
 
 
@@ -35,6 +42,7 @@ def create_project_form(
     description: str = Form(""),
     tech_stack_raw: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     slug = slugify(name)
     tech_stack = [t.strip() for t in tech_stack_raw.split(",") if t.strip()]
@@ -43,19 +51,25 @@ def create_project_form(
         slug=slug,
         description=description or None,
         tech_stack=tech_stack,
+        user_id=current_user.id,
     )
     db.add(project)
     db.commit()
     logger.info("Proyecto creado desde UI: '%s'", project.slug)
-    # HTMX: navegar sin reload. Fallback para peticiones normales.
     if request.headers.get("HX-Request"):
         return Response(status_code=200, headers={"HX-Redirect": f"/projects/{project.slug}"})
     return RedirectResponse(url=f"/projects/{project.slug}", status_code=303)
 
 
 @router.get("/ui/dashboard/cards", response_class=HTMLResponse)
-def dashboard_cards(request: Request, q: str = "", status: str = "", db: Session = Depends(get_db)) -> HTMLResponse:
-    query = db.query(Project)
+def dashboard_cards(
+    request: Request,
+    q: str = "",
+    status: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    query = db.query(Project).filter(Project.user_id == current_user.id)
     if status:
         query = query.filter(Project.status == status)
     if q:
@@ -64,5 +78,5 @@ def dashboard_cards(request: Request, q: str = "", status: str = "", db: Session
     projects = query.order_by(Project.name).all()
     return templates.TemplateResponse(
         "partials/project_cards.html",
-        {"request": request, "projects": projects},
+        {"request": request, "projects": projects, "current_user": current_user},
     )

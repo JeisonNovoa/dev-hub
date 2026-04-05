@@ -9,6 +9,9 @@ class Credential(Base, TimestampMixin):
     __tablename__ = "credentials"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     service_id: Mapped[int | None] = mapped_column(
         ForeignKey("services.id", ondelete="SET NULL"), nullable=True
     )

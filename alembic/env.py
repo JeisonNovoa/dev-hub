@@ -7,7 +7,7 @@ from alembic import context
 # Importar settings y todos los modelos para que autogenerate los detecte
 from app.config import settings
 from app.models.common import Base
-from app.models import Project, EnvVariable, Command, QuickLink, Service, Credential  # noqa: F401
+from app.models import User, Project, EnvVariable, Command, QuickLink, Service, Credential  # noqa: F401
 
 config = context.config
 

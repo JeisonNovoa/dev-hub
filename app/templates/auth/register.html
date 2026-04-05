@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta — Dev Hub{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[60vh]">
+  <div class="w-full max-w-sm">
+
+    <h1 class="text-xl font-semibold font-mono text-gray-100 mb-6 text-center">
+      <span class="text-accent">▸</span> dev-hub
+    </h1>
+
+    {% if error %}
+    <div class="mb-4 px-4 py-3 rounded-lg bg-red-900/50 border border-red-700 text-red-300 text-sm">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="/register" class="space-y-4"
+          x-data="{ pass: '', confirm: '' }">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1.5" for="email">Email</label>
+        <input
+          id="email" name="email" type="email" required autocomplete="email"
+          class="w-full px-3 py-2 rounded-md bg-surface border border-surface-border text-gray-100
+                 text-sm placeholder-gray-600 focus:outline-none focus:border-accent transition-colors"
+          placeholder="tu@email.com"
+        />
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1.5" for="password">Contraseña</label>
+        <input
+          id="password" name="password" type="password" required autocomplete="new-password"
+          x-model="pass" minlength="8"
+          class="w-full px-3 py-2 rounded-md bg-surface border border-surface-border text-gray-100
+                 text-sm placeholder-gray-600 focus:outline-none focus:border-accent transition-colors"
+          placeholder="Mínimo 8 caracteres"
+        />
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1.5" for="password_confirm">Confirmar contraseña</label>
+        <input
+          id="password_confirm" name="password_confirm" type="password" required autocomplete="new-password"
+          x-model="confirm"
+          class="w-full px-3 py-2 rounded-md bg-surface border border-surface-border text-gray-100
+                 text-sm placeholder-gray-600 focus:outline-none focus:border-accent transition-colors"
+          :class="confirm && pass !== confirm ? 'border-red-600' : ''"
+          placeholder="••••••••"
+        />
+        <p x-show="confirm && pass !== confirm" class="mt-1 text-xs text-red-400">
+          Las contraseñas no coinciden
+        </p>
+      </div>
+
+      <button type="submit"
+              :disabled="confirm && pass !== confirm"
+              class="w-full py-2 px-4 rounded-md bg-accent text-surface font-medium text-sm
+                     hover:bg-accent/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+        Crear cuenta
+      </button>
+    </form>
+
+    <p class="mt-5 text-center text-xs text-gray-500">
+      ¿Ya tienes cuenta?
+      <a href="/login" class="text-accent hover:underline">Inicia sesión</a>
+    </p>
+
+  </div>
+</div>
+{% endblock %}

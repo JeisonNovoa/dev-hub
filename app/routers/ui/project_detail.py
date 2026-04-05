@@ -4,24 +4,28 @@ from slugify import slugify
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_project_or_404
+from app.dependencies import get_current_user, get_project_or_404
 from app.jinja import templates
-from app.models import Command, Credential, EnvVariable, QuickLink, Repo, Service
+from app.models import Command, Credential, EnvVariable, QuickLink, Repo, Service, User
 
 router = APIRouter()
 
 
 @router.get("/projects/{slug}", response_class=HTMLResponse)
-def project_detail(slug: str, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
-    # Solo comandos globales (sin repo) agrupados por tipo
+def project_detail(
+    slug: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     commands_by_type: dict[str, list[Command]] = {}
     for cmd in project.commands:
         if cmd.repo_id is None:
             commands_by_type.setdefault(cmd.type, []).append(cmd)
     return templates.TemplateResponse(
         "project/detail.html",
-        {"request": request, "project": project, "commands_by_type": commands_by_type},
+        {"request": request, "project": project, "commands_by_type": commands_by_type, "current_user": current_user},
     )
 
 
@@ -43,8 +47,9 @@ def env_var_new_submit(
     value: str = Form(""),
     description: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     env_var = EnvVariable(
         project_id=project.id,
         key=key,
@@ -82,8 +87,9 @@ def command_new_submit(
     order: int = Form(0),
     type: str = Form("start"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     cmd = Command(project_id=project.id, label=label, command=command, order=order, type=type)
     db.add(cmd)
     db.commit()
@@ -110,8 +116,9 @@ def link_new_submit(
     url: str = Form(...),
     category: str = Form("other"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     link = QuickLink(project_id=project.id, label=label, url=url, category=category)
     db.add(link)
     db.commit()
@@ -125,8 +132,12 @@ def link_new_submit(
 # ---- Formularios de edición (edit) ----
 
 @router.get("/ui/projects/{slug}/env-vars/{env_id}/edit", response_class=HTMLResponse)
-def env_var_edit_form(slug: str, env_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def env_var_edit_form(
+    slug: str, env_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     env_var = db.query(EnvVariable).filter(EnvVariable.id == env_id, EnvVariable.project_id == project.id).first()
     if not env_var:
         raise HTTPException(status_code=404)
@@ -137,8 +148,12 @@ def env_var_edit_form(slug: str, env_id: int, request: Request, db: Session = De
 
 
 @router.get("/ui/projects/{slug}/env-vars/{env_id}/view", response_class=HTMLResponse)
-def env_var_view(slug: str, env_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def env_var_view(
+    slug: str, env_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     env_var = db.query(EnvVariable).filter(EnvVariable.id == env_id, EnvVariable.project_id == project.id).first()
     if not env_var:
         raise HTTPException(status_code=404)
@@ -149,8 +164,12 @@ def env_var_view(slug: str, env_id: int, request: Request, db: Session = Depends
 
 
 @router.get("/ui/projects/{slug}/commands/{cmd_id}/edit", response_class=HTMLResponse)
-def command_edit_form(slug: str, cmd_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def command_edit_form(
+    slug: str, cmd_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     cmd = db.query(Command).filter(Command.id == cmd_id, Command.project_id == project.id).first()
     if not cmd:
         raise HTTPException(status_code=404)
@@ -161,8 +180,12 @@ def command_edit_form(slug: str, cmd_id: int, request: Request, db: Session = De
 
 
 @router.get("/ui/projects/{slug}/commands/{cmd_id}/view", response_class=HTMLResponse)
-def command_view(slug: str, cmd_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def command_view(
+    slug: str, cmd_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     cmd = db.query(Command).filter(Command.id == cmd_id, Command.project_id == project.id).first()
     if not cmd:
         raise HTTPException(status_code=404)
@@ -173,8 +196,12 @@ def command_view(slug: str, cmd_id: int, request: Request, db: Session = Depends
 
 
 @router.get("/ui/projects/{slug}/links/{link_id}/edit", response_class=HTMLResponse)
-def link_edit_form(slug: str, link_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def link_edit_form(
+    slug: str, link_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     link = db.query(QuickLink).filter(QuickLink.id == link_id, QuickLink.project_id == project.id).first()
     if not link:
         raise HTTPException(status_code=404)
@@ -185,8 +212,12 @@ def link_edit_form(slug: str, link_id: int, request: Request, db: Session = Depe
 
 
 @router.get("/ui/projects/{slug}/links/{link_id}/view", response_class=HTMLResponse)
-def link_view(slug: str, link_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def link_view(
+    slug: str, link_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     link = db.query(QuickLink).filter(QuickLink.id == link_id, QuickLink.project_id == project.id).first()
     if not link:
         raise HTTPException(status_code=404)
@@ -220,10 +251,12 @@ def service_new_submit(
     url: str = Form(""),
     notes: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     service = Service(
         project_id=project.id,
+        user_id=current_user.id,
         name=name,
         category=category,
         url=url or None,
@@ -239,8 +272,12 @@ def service_new_submit(
 
 
 @router.get("/ui/projects/{slug}/services/{service_id}/edit", response_class=HTMLResponse)
-def service_edit_form(slug: str, service_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def service_edit_form(
+    slug: str, service_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     service = db.query(Service).filter(Service.id == service_id, Service.project_id == project.id).first()
     if not service:
         raise HTTPException(status_code=404)
@@ -251,8 +288,12 @@ def service_edit_form(slug: str, service_id: int, request: Request, db: Session 
 
 
 @router.get("/ui/projects/{slug}/services/{service_id}/view", response_class=HTMLResponse)
-def service_view(slug: str, service_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def service_view(
+    slug: str, service_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     service = db.query(Service).filter(Service.id == service_id, Service.project_id == project.id).first()
     if not service:
         raise HTTPException(status_code=404)
@@ -265,8 +306,12 @@ def service_view(slug: str, service_id: int, request: Request, db: Session = Dep
 # ---- Header del proyecto ----
 
 @router.get("/ui/projects/{slug}/header/view", response_class=HTMLResponse)
-def project_header_view(slug: str, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def project_header_view(
+    slug: str, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     return templates.TemplateResponse(
         "project/partials/project_header.html",
         {"request": request, "project": project},
@@ -274,8 +319,12 @@ def project_header_view(slug: str, request: Request, db: Session = Depends(get_d
 
 
 @router.get("/ui/projects/{slug}/header/edit", response_class=HTMLResponse)
-def project_header_edit(slug: str, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def project_header_edit(
+    slug: str, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     return templates.TemplateResponse(
         "project/partials/project_header_edit.html",
         {"request": request, "project": project},
@@ -290,8 +339,9 @@ def project_header_save(
     description: str = Form(""),
     tech_stack_raw: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     project.name = name
     project.description = description or None
     project.tech_stack = [t.strip() for t in tech_stack_raw.split(",") if t.strip()]
@@ -306,8 +356,12 @@ def project_header_save(
 # ---- Notas ----
 
 @router.get("/ui/projects/{slug}/notes/view", response_class=HTMLResponse)
-def notes_view(slug: str, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def notes_view(
+    slug: str, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     return templates.TemplateResponse(
         "project/partials/notes_view.html",
         {"request": request, "project": project},
@@ -315,8 +369,12 @@ def notes_view(slug: str, request: Request, db: Session = Depends(get_db)) -> HT
 
 
 @router.get("/ui/projects/{slug}/notes/edit", response_class=HTMLResponse)
-def notes_edit(slug: str, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def notes_edit(
+    slug: str, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     return templates.TemplateResponse(
         "project/partials/notes_edit.html",
         {"request": request, "project": project},
@@ -329,8 +387,9 @@ def notes_save(
     request: Request,
     notes: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     project.notes = notes or None
     db.commit()
     db.refresh(project)
@@ -359,8 +418,9 @@ def repo_new_submit(
     github_url: str = Form(""),
     description: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     repo_slug = slugify(name)
     repo = Repo(
         project_id=project.id,
@@ -380,8 +440,12 @@ def repo_new_submit(
 
 
 @router.get("/ui/projects/{slug}/repos/{repo_id}/edit", response_class=HTMLResponse)
-def repo_edit_form(slug: str, repo_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def repo_edit_form(
+    slug: str, repo_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     repo = db.query(Repo).filter(Repo.id == repo_id, Repo.project_id == project.id).first()
     if not repo:
         raise HTTPException(status_code=404)
@@ -392,8 +456,12 @@ def repo_edit_form(slug: str, repo_id: int, request: Request, db: Session = Depe
 
 
 @router.get("/ui/projects/{slug}/repos/{repo_id}/view", response_class=HTMLResponse)
-def repo_view(slug: str, repo_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def repo_view(
+    slug: str, repo_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     repo = db.query(Repo).filter(Repo.id == repo_id, Repo.project_id == project.id).first()
     if not repo:
         raise HTTPException(status_code=404)
@@ -423,8 +491,9 @@ def repo_command_new_submit(
     order: int = Form(0),
     type: str = Form("start"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     repo = db.query(Repo).filter(Repo.id == repo_id, Repo.project_id == project.id).first()
     if not repo:
         raise HTTPException(status_code=404)
@@ -458,10 +527,12 @@ def credential_new_submit(
     url: str = Form(""),
     login_via: str = Form("email"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     cred = Credential(
         project_id=project.id,
+        user_id=current_user.id,
         label=label,
         username=username or None,
         password=password or None,
@@ -479,8 +550,12 @@ def credential_new_submit(
 
 
 @router.get("/ui/projects/{slug}/credentials/{cred_id}/edit", response_class=HTMLResponse)
-def credential_edit_form(slug: str, cred_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def credential_edit_form(
+    slug: str, cred_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     cred = db.query(Credential).filter(Credential.id == cred_id, Credential.project_id == project.id).first()
     if not cred:
         raise HTTPException(status_code=404)
@@ -502,8 +577,9 @@ def credential_save(
     login_via: str = Form("email"),
     notes: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     cred = db.query(Credential).filter(Credential.id == cred_id, Credential.project_id == project.id).first()
     if not cred:
         raise HTTPException(status_code=404)
@@ -522,8 +598,12 @@ def credential_save(
 
 
 @router.get("/ui/projects/{slug}/credentials/{cred_id}/view", response_class=HTMLResponse)
-def credential_view(slug: str, cred_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+def credential_view(
+    slug: str, cred_id: int, request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    project = get_project_or_404(slug, db, current_user)
     cred = db.query(Credential).filter(Credential.id == cred_id, Credential.project_id == project.id).first()
     if not cred:
         raise HTTPException(status_code=404)
@@ -552,8 +632,9 @@ def repo_env_var_new_submit(
     value: str = Form(""),
     description: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    project = get_project_or_404(slug, db)
+    project = get_project_or_404(slug, db, current_user)
     repo = db.query(Repo).filter(Repo.id == repo_id, Repo.project_id == project.id).first()
     if not repo:
         raise HTTPException(status_code=404)

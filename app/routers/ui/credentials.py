@@ -3,8 +3,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import get_current_user
 from app.jinja import templates
-from app.models import Credential
+from app.models import Credential, User
 
 router = APIRouter()
 
@@ -15,17 +16,17 @@ def credentials_page(
     q: str = "",
     category: str = "",
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    credentials = _query_credentials(q, category, db)
-    # Si es HTMX, devolver solo las filas
+    credentials = _query_credentials(q, category, current_user.id, db)
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse(
             "credentials/partials/credential_rows.html",
-            {"request": request, "credentials": credentials},
+            {"request": request, "credentials": credentials, "current_user": current_user},
         )
     return templates.TemplateResponse(
         "credentials/index.html",
-        {"request": request, "credentials": credentials, "q": q, "category_filter": category},
+        {"request": request, "credentials": credentials, "q": q, "category_filter": category, "current_user": current_user},
     )
 
 
@@ -38,6 +39,7 @@ def create_credential_form(
     category: str = Form("work"),
     login_via: str = Form("email"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> RedirectResponse:
     cred = Credential(
         label=label,
@@ -46,6 +48,7 @@ def create_credential_form(
         url=url or None,
         category=category,
         login_via=login_via,
+        user_id=current_user.id,
     )
     db.add(cred)
     db.commit()
@@ -53,24 +56,34 @@ def create_credential_form(
 
 
 @router.get("/ui/credentials/{cred_id}/edit", response_class=HTMLResponse)
-def credential_edit_form(cred_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    cred = db.query(Credential).filter(Credential.id == cred_id).first()
+def credential_edit_form(
+    cred_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    cred = db.query(Credential).filter(Credential.id == cred_id, Credential.user_id == current_user.id).first()
     if not cred:
         raise HTTPException(status_code=404)
     return templates.TemplateResponse(
         "credentials/partials/credential_edit_row.html",
-        {"request": request, "cred": cred},
+        {"request": request, "cred": cred, "current_user": current_user},
     )
 
 
 @router.get("/ui/credentials/{cred_id}/view", response_class=HTMLResponse)
-def credential_view(cred_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    cred = db.query(Credential).filter(Credential.id == cred_id).first()
+def credential_view(
+    cred_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    cred = db.query(Credential).filter(Credential.id == cred_id, Credential.user_id == current_user.id).first()
     if not cred:
         raise HTTPException(status_code=404)
     return templates.TemplateResponse(
         "credentials/partials/credential_row.html",
-        {"request": request, "cred": cred},
+        {"request": request, "cred": cred, "current_user": current_user},
     )
 
 
@@ -87,8 +100,9 @@ def credential_save(
     notes: str = Form(""),
     project_id: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    cred = db.query(Credential).filter(Credential.id == cred_id).first()
+    cred = db.query(Credential).filter(Credential.id == cred_id, Credential.user_id == current_user.id).first()
     if not cred:
         raise HTTPException(status_code=404)
     cred.label = label
@@ -103,12 +117,12 @@ def credential_save(
     db.refresh(cred)
     return templates.TemplateResponse(
         "credentials/partials/credential_row.html",
-        {"request": request, "cred": cred},
+        {"request": request, "cred": cred, "current_user": current_user},
     )
 
 
-def _query_credentials(q: str, category: str, db: Session) -> list[Credential]:
-    query = db.query(Credential)
+def _query_credentials(q: str, category: str, user_id: int, db: Session) -> list[Credential]:
+    query = db.query(Credential).filter(Credential.user_id == user_id)
     if category:
         query = query.filter(Credential.category == category)
     if q:

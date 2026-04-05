@@ -4,15 +4,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Credential
+from app.dependencies import get_current_user
+from app.models import Credential, User
 from app.schemas.credential import CredentialCreate, CredentialResponse, CredentialUpdate
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-def _get_credential_or_404(cred_id: int, db: Session) -> Credential:
-    cred = db.query(Credential).filter(Credential.id == cred_id).first()
+def _get_credential_or_404(cred_id: int, user_id: int, db: Session) -> Credential:
+    cred = db.query(Credential).filter(Credential.id == cred_id, Credential.user_id == user_id).first()
     if not cred:
         logger.warning("Credencial no encontrada: id=%d", cred_id)
         raise HTTPException(status_code=404, detail="Credencial no encontrada")
@@ -25,8 +26,9 @@ def list_credentials(
     category: str | None = None,
     search: str | None = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> list[Credential]:
-    query = db.query(Credential)
+    query = db.query(Credential).filter(Credential.user_id == current_user.id)
     if project_id is not None:
         query = query.filter(Credential.project_id == project_id)
     if category:
@@ -40,7 +42,11 @@ def list_credentials(
 
 
 @router.post("", response_model=CredentialResponse, status_code=status.HTTP_201_CREATED)
-def create_credential(data: CredentialCreate, db: Session = Depends(get_db)) -> Credential:
+def create_credential(
+    data: CredentialCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Credential:
     cred = Credential(
         label=data.label,
         username=data.username,
@@ -50,6 +56,7 @@ def create_credential(data: CredentialCreate, db: Session = Depends(get_db)) -> 
         notes=data.notes,
         service_id=data.service_id,
         project_id=data.project_id,
+        user_id=current_user.id,
     )
     db.add(cred)
     db.commit()
@@ -59,13 +66,22 @@ def create_credential(data: CredentialCreate, db: Session = Depends(get_db)) -> 
 
 
 @router.get("/{cred_id}", response_model=CredentialResponse)
-def get_credential(cred_id: int, db: Session = Depends(get_db)) -> Credential:
-    return _get_credential_or_404(cred_id, db)
+def get_credential(
+    cred_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Credential:
+    return _get_credential_or_404(cred_id, current_user.id, db)
 
 
 @router.put("/{cred_id}", response_model=CredentialResponse)
-def update_credential(cred_id: int, data: CredentialUpdate, db: Session = Depends(get_db)) -> Credential:
-    cred = _get_credential_or_404(cred_id, db)
+def update_credential(
+    cred_id: int,
+    data: CredentialUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Credential:
+    cred = _get_credential_or_404(cred_id, current_user.id, db)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(cred, field, value)
     db.commit()
@@ -74,8 +90,12 @@ def update_credential(cred_id: int, data: CredentialUpdate, db: Session = Depend
 
 
 @router.delete("/{cred_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_credential(cred_id: int, db: Session = Depends(get_db)) -> None:
-    cred = _get_credential_or_404(cred_id, db)
+def delete_credential(
+    cred_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    cred = _get_credential_or_404(cred_id, current_user.id, db)
     label = cred.label
     db.delete(cred)
     db.commit()

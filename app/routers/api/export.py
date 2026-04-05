@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Credential, Project, Service
+from app.dependencies import get_current_user
+from app.models import Credential, Project, Service, User
 from app.schemas.credential import CredentialResponse
 from app.schemas.project import (
     CommandResponse,
@@ -17,10 +18,13 @@ router = APIRouter()
 
 
 @router.get("")
-def export_all(db: Session = Depends(get_db)) -> dict:
-    projects = db.query(Project).order_by(Project.name).all()
-    credentials = db.query(Credential).order_by(Credential.label).all()
-    services = db.query(Service).order_by(Service.name).all()
+def export_all(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    projects = db.query(Project).filter(Project.user_id == current_user.id).order_by(Project.name).all()
+    credentials = db.query(Credential).filter(Credential.user_id == current_user.id).order_by(Credential.label).all()
+    services = db.query(Service).filter(Service.user_id == current_user.id).order_by(Service.name).all()
 
     projects_data = []
     for p in projects:

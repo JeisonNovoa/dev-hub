@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Iniciar sesión — Dev Hub{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[60vh]">
+  <div class="w-full max-w-sm">
+
+    <h1 class="text-xl font-semibold font-mono text-gray-100 mb-6 text-center">
+      <span class="text-accent">▸</span> dev-hub
+    </h1>
+
+    {% if error %}
+    <div class="mb-4 px-4 py-3 rounded-lg bg-red-900/50 border border-red-700 text-red-300 text-sm">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="/login" class="space-y-4">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1.5" for="email">Email</label>
+        <input
+          id="email" name="email" type="email" required autocomplete="email"
+          class="w-full px-3 py-2 rounded-md bg-surface border border-surface-border text-gray-100
+                 text-sm placeholder-gray-600 focus:outline-none focus:border-accent transition-colors"
+          placeholder="tu@email.com"
+        />
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1.5" for="password">Contraseña</label>
+        <input
+          id="password" name="password" type="password" required autocomplete="current-password"
+          class="w-full px-3 py-2 rounded-md bg-surface border border-surface-border text-gray-100
+                 text-sm placeholder-gray-600 focus:outline-none focus:border-accent transition-colors"
+          placeholder="••••••••"
+        />
+      </div>
+
+      <button type="submit"
+              class="w-full py-2 px-4 rounded-md bg-accent text-surface font-medium text-sm
+                     hover:bg-accent/90 transition-colors">
+        Iniciar sesión
+      </button>
+    </form>
+
+    <p class="mt-5 text-center text-xs text-gray-500">
+      ¿No tienes cuenta?
+      <a href="/register" class="text-accent hover:underline">Regístrate</a>
+    </p>
+
+  </div>
+</div>
+{% endblock %}

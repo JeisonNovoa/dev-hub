@@ -9,3 +9,6 @@ python-slugify==8.0.4
 psycopg2-binary==2.9.10
 markdown==3.7
 cryptography==44.0.2
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+itsdangerous==2.2.0

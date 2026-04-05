@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     app_name: str = "Dev Hub"
     debug: bool = False
     encryption_key: str  # obligatoria — genera una con: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    secret_key: str  # obligatoria — genera una con: python -c "import secrets; print(secrets.token_hex(32))"
 
     @field_validator("encryption_key")
     @classmethod
@@ -18,6 +19,16 @@ class Settings(BaseSettings):
             raise ValueError(
                 "ENCRYPTION_KEY inválida. Genera una con: "
                 "python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            )
+        return v
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        if len(v) < 32:
+            raise ValueError(
+                "SECRET_KEY debe tener al menos 32 caracteres. Genera una con: "
+                "python -c \"import secrets; print(secrets.token_hex(32))\""
             )
         return v
 
