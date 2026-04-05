@@ -61,7 +61,7 @@ def upgrade() -> None:
     now = datetime.now(timezone.utc).isoformat()
     op.execute(
         f"INSERT INTO users (email, hashed_password, is_active, created_at, updated_at) "
-        f"VALUES ('{_ADMIN_EMAIL}', '{_ADMIN_HASH}', 1, '{now}', '{now}')"
+        f"VALUES ('{_ADMIN_EMAIL}', '{_ADMIN_HASH}', TRUE, '{now}', '{now}')"
     )
 
     # ── 4. Asignar todos los datos existentes al admin ────────────────────────
