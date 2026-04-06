@@ -14,7 +14,7 @@ router = APIRouter()
 def credentials_page(
     request: Request,
     q: str = "",
-    category: str = "",
+    category: str = "work",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
