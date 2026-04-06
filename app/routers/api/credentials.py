@@ -13,7 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 def _get_credential_or_404(cred_id: int, user_id: int, db: Session) -> Credential:
-    cred = db.query(Credential).filter(Credential.id == cred_id, Credential.user_id == user_id).first()
+    cred = (
+        db.query(Credential)
+        .filter(Credential.id == cred_id, Credential.user_id == user_id, Credential.deleted_at.is_(None))
+        .first()
+    )
     if not cred:
         logger.warning("Credencial no encontrada: id=%d", cred_id)
         raise HTTPException(status_code=404, detail="Credencial no encontrada")
@@ -28,7 +32,9 @@ def list_credentials(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[Credential]:
-    query = db.query(Credential).filter(Credential.user_id == current_user.id)
+    query = db.query(Credential).filter(
+        Credential.user_id == current_user.id, Credential.deleted_at.is_(None)
+    )
     if project_id is not None:
         query = query.filter(Credential.project_id == project_id)
     if category:
@@ -95,8 +101,8 @@ def delete_credential(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> None:
+    from datetime import datetime, timezone
     cred = _get_credential_or_404(cred_id, current_user.id, db)
-    label = cred.label
-    db.delete(cred)
+    cred.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    logger.info("Credencial eliminada: '%s' (id=%d)", label, cred_id)
+    logger.info("Credencial movida a papelera: '%s' (id=%d)", cred.label, cred_id)

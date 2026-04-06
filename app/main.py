@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -14,7 +15,20 @@ configure_logging(debug=settings.debug)
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title=settings.app_name)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from app.database import SessionLocal
+    from app.routers.ui.credentials import _purge_expired
+    db = SessionLocal()
+    try:
+        _purge_expired(db)
+    finally:
+        db.close()
+    yield
+
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 logger.info("Iniciando %s", settings.app_name)
 
