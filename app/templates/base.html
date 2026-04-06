@@ -39,11 +39,6 @@
              {% if '/credentials' in request.url.path %}text-gray-100 bg-surface border border-surface-border{% endif %}">
           Credenciales
         </a>
-        <a href="/search"
-           class="px-3 py-1.5 rounded-md transition-colors hover:text-gray-100
-             {% if '/search' in request.url.path %}text-gray-100 bg-surface border border-surface-border{% endif %}">
-          Buscar
-        </a>
         <span class="mx-2 text-surface-border">|</span>
         <span class="text-xs text-gray-500 mr-1">{{ current_user.email }}</span>
         <form method="post" action="/logout" class="inline">

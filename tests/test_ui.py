@@ -527,38 +527,6 @@ def test_credential_edit_404_ui(client):
     assert res.status_code == 404
 
 
-# ─── Búsqueda global ─────────────────────────────────────────────────────────
-
-def test_search_page_empty(client):
-    res = client.get("/search")
-    assert res.status_code == 200
-
-
-def test_search_finds_projects(client):
-    _create_project(client, "My FastAPI App")
-    res = client.get("/search?q=fastapi")
-    assert res.status_code == 200
-    assert b"My FastAPI App" in res.content
-
-
-def test_search_finds_credentials(client):
-    _create_credential(client, "GitHub Token", "work")
-    res = client.get("/search?q=github")
-    assert res.status_code == 200
-    assert b"GitHub Token" in res.content
-
-
-def test_search_htmx(client):
-    _create_project(client, "Django App")
-    res = client.get("/search?q=django", headers={"HX-Request": "true"})
-    assert res.status_code == 200
-    assert b"Django App" in res.content
-
-
-def test_search_no_results(client):
-    res = client.get("/search?q=xyznonexistent")
-    assert res.status_code == 200
-
 
 # ─── Repo commands y env-vars (UI) ───────────────────────────────────────────
 
