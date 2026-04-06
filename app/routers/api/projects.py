@@ -19,7 +19,7 @@ def list_projects(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[Project]:
-    query = db.query(Project).filter(Project.user_id == current_user.id)
+    query = db.query(Project).filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
     if status:
         query = query.filter(Project.status == status)
     return query.order_by(Project.name).all()
@@ -92,7 +92,8 @@ def delete_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> None:
+    from datetime import datetime, timezone
     project = get_project_or_404(slug, db, current_user)
-    db.delete(project)
+    project.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    logger.info("Proyecto eliminado: '%s'", slug)
+    logger.info("Proyecto movido a papelera: '%s'", slug)

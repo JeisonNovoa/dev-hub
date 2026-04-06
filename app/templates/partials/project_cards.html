@@ -1,66 +1,82 @@
 {% for project in projects %}
-<a href="/projects/{{ project.slug }}"
-   class="block bg-surface-card border-l-2 border border-surface-border rounded-xl p-5 transition-all duration-200 group
-     hover:-translate-y-0.5 hover:bg-surface-hover hover:shadow-lg
-     {% if project.status == 'active' %}border-l-accent
-     {% elif project.status == 'paused' %}border-l-yellow-500
-     {% else %}border-l-gray-600{% endif %}"
-   style="{% if project.status == 'active' %}--tw-shadow-color: rgba(34,197,94,0.08);{% elif project.status == 'paused' %}--tw-shadow-color: rgba(234,179,8,0.06);{% endif %}">
+<div id="proj-card-{{ project.slug }}" class="relative group">
+  <a href="/projects/{{ project.slug }}"
+     class="block bg-surface-card border-l-2 border border-surface-border rounded-xl p-5 transition-all duration-200
+       hover:-translate-y-0.5 hover:bg-surface-hover hover:shadow-lg
+       {% if project.status == 'active' %}border-l-accent
+       {% elif project.status == 'paused' %}border-l-yellow-500
+       {% else %}border-l-gray-600{% endif %}"
+     style="{% if project.status == 'active' %}--tw-shadow-color: rgba(34,197,94,0.08);{% elif project.status == 'paused' %}--tw-shadow-color: rgba(234,179,8,0.06);{% endif %}">
 
-  <!-- Header -->
-  <div class="flex items-start justify-between mb-3">
-    <h3 class="font-mono font-semibold text-gray-100 group-hover:text-accent transition-colors truncate mr-2 text-sm">
-      {{ project.name }}
-    </h3>
-    <!-- Status badge -->
-    <span class="shrink-0 text-xs px-2 py-0.5 rounded font-mono font-medium
-      {% if project.status == 'active' %}bg-accent/10 text-accent border border-accent/20
-      {% elif project.status == 'paused' %}bg-yellow-500/10 text-yellow-400 border border-yellow-500/20
-      {% else %}bg-gray-800/60 text-gray-500 border border-gray-700{% endif %}">
-      {% if project.status == 'active' %}● active
-      {% elif project.status == 'paused' %}⏸ paused
-      {% else %}— archived{% endif %}
-    </span>
-  </div>
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-3">
+      <h3 class="font-mono font-semibold text-gray-100 group-hover:text-accent transition-colors truncate mr-2 text-sm">
+        {{ project.name }}
+      </h3>
+      <!-- Status badge -->
+      <span class="shrink-0 text-xs px-2 py-0.5 rounded font-mono font-medium
+        {% if project.status == 'active' %}bg-accent/10 text-accent border border-accent/20
+        {% elif project.status == 'paused' %}bg-yellow-500/10 text-yellow-400 border border-yellow-500/20
+        {% else %}bg-gray-800/60 text-gray-500 border border-gray-700{% endif %}">
+        {% if project.status == 'active' %}● active
+        {% elif project.status == 'paused' %}⏸ paused
+        {% else %}— archived{% endif %}
+      </span>
+    </div>
 
-  <!-- Description -->
-  {% if project.description %}
-  <p class="text-sm text-gray-400 mb-4 line-clamp-2 leading-relaxed">{{ project.description }}</p>
-  {% endif %}
+    <!-- Description -->
+    {% if project.description %}
+    <p class="text-sm text-gray-400 mb-4 line-clamp-2 leading-relaxed">{{ project.description }}</p>
+    {% endif %}
 
-  <!-- Tech stack -->
-  {% if project.tech_stack %}
-  <div class="flex flex-wrap gap-1.5 mb-3">
-    {% for tech in project.tech_stack %}
-    <span class="text-xs px-2 py-0.5 rounded font-mono bg-surface border border-surface-border text-gray-500 group-hover:border-accent/20 transition-colors">
-      {{ tech }}
-    </span>
-    {% endfor %}
-  </div>
-  {% endif %}
+    <!-- Tech stack -->
+    {% if project.tech_stack %}
+    <div class="flex flex-wrap gap-1.5 mb-3">
+      {% for tech in project.tech_stack %}
+      <span class="text-xs px-2 py-0.5 rounded font-mono bg-surface border border-surface-border text-gray-500 group-hover:border-accent/20 transition-colors">
+        {{ tech }}
+      </span>
+      {% endfor %}
+    </div>
+    {% endif %}
 
-  <!-- Contadores -->
-  {% set total_cmds = project.commands | length %}
-  {% set total_envs = project.env_vars | length %}
-  {% set total_repos = project.repos | length %}
-  {% set total_links = project.links | length %}
-  {% if total_repos or total_cmds or total_envs or total_links %}
-  <div class="flex flex-wrap gap-x-3 gap-y-1 mt-auto pt-3 border-t border-surface-border/60">
-    {% if total_repos %}
-    <span class="text-xs text-gray-600 font-mono">{{ total_repos }} repo{% if total_repos != 1 %}s{% endif %}</span>
+    <!-- Contadores -->
+    {% set total_cmds = project.commands | length %}
+    {% set total_envs = project.env_vars | length %}
+    {% set total_repos = project.repos | length %}
+    {% set total_links = project.links | length %}
+    {% if total_repos or total_cmds or total_envs or total_links %}
+    <div class="flex flex-wrap gap-x-3 gap-y-1 mt-auto pt-3 border-t border-surface-border/60">
+      {% if total_repos %}
+      <span class="text-xs text-gray-600 font-mono">{{ total_repos }} repo{% if total_repos != 1 %}s{% endif %}</span>
+      {% endif %}
+      {% if total_cmds %}
+      <span class="text-xs text-gray-600 font-mono">{{ total_cmds }} cmd{% if total_cmds != 1 %}s{% endif %}</span>
+      {% endif %}
+      {% if total_envs %}
+      <span class="text-xs text-gray-600 font-mono">{{ total_envs }} env var{% if total_envs != 1 %}s{% endif %}</span>
+      {% endif %}
+      {% if total_links %}
+      <span class="text-xs text-gray-600 font-mono">{{ total_links }} link{% if total_links != 1 %}s{% endif %}</span>
+      {% endif %}
+    </div>
     {% endif %}
-    {% if total_cmds %}
-    <span class="text-xs text-gray-600 font-mono">{{ total_cmds }} cmd{% if total_cmds != 1 %}s{% endif %}</span>
-    {% endif %}
-    {% if total_envs %}
-    <span class="text-xs text-gray-600 font-mono">{{ total_envs }} env var{% if total_envs != 1 %}s{% endif %}</span>
-    {% endif %}
-    {% if total_links %}
-    <span class="text-xs text-gray-600 font-mono">{{ total_links }} link{% if total_links != 1 %}s{% endif %}</span>
-    {% endif %}
-  </div>
-  {% endif %}
-</a>
+  </a>
+
+  <!-- Botón papelera (aparece en hover) -->
+  <button
+    hx-post="/ui/projects/{{ project.slug }}/trash"
+    hx-target="#proj-card-{{ project.slug }}"
+    hx-swap="outerHTML"
+    hx-confirm="¿Mover '{{ project.name }}' a la papelera?"
+    onclick="event.stopPropagation()"
+    class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-surface-card border border-surface-border text-gray-600 hover:text-red-400 hover:border-red-800/50 hover:bg-surface"
+    title="Mover a papelera">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  </button>
+</div>
 
 {% else %}
 <!-- Empty state -->

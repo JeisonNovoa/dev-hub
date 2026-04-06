@@ -1,7 +1,11 @@
-from sqlalchemy import JSON, ForeignKey, Integer, String, Text
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import DateTime, JSON, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.common import Base, TimestampMixin
+
+TRASH_RETENTION_DAYS = 30
 
 
 class Project(Base, TimestampMixin):
@@ -17,6 +21,15 @@ class Project(Base, TimestampMixin):
     tech_stack: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+
+    @property
+    def days_until_purge(self) -> int | None:
+        if self.deleted_at is None:
+            return None
+        now = datetime.now(timezone.utc)
+        deleted = self.deleted_at if self.deleted_at.tzinfo else self.deleted_at.replace(tzinfo=timezone.utc)
+        return max(0, (deleted + timedelta(days=TRASH_RETENTION_DAYS) - now).days)
 
     env_vars: Mapped[list["EnvVariable"]] = relationship(
         back_populates="project",

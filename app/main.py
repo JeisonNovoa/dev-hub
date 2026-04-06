@@ -20,9 +20,11 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     from app.database import SessionLocal
     from app.routers.ui.credentials import _purge_expired
+    from app.routers.ui.dashboard import _purge_expired_projects
     db = SessionLocal()
     try:
         _purge_expired(db)
+        _purge_expired_projects(db)
     finally:
         db.close()
     yield

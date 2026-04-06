@@ -46,7 +46,7 @@ def get_current_user_optional(
 def get_project_or_404(slug: str, db: Session, current_user: User) -> Project:
     project = (
         db.query(Project)
-        .filter(Project.slug == slug, Project.user_id == current_user.id)
+        .filter(Project.slug == slug, Project.user_id == current_user.id, Project.deleted_at.is_(None))
         .first()
     )
     if not project:
