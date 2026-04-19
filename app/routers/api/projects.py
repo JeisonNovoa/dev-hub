@@ -32,9 +32,11 @@ def create_project(
     current_user: User = Depends(get_current_user),
 ) -> Project:
     slug = data.slug or slugify(data.name)
-    existing = db.query(Project).filter(Project.slug == slug).first()
+    existing = db.query(Project).filter(
+        Project.slug == slug, Project.user_id == current_user.id
+    ).first()
     if existing:
-        logger.warning("Intento de crear proyecto con slug duplicado: '%s'", slug)
+        logger.warning("Intento de crear proyecto con slug duplicado: '%s' (user=%d)", slug, current_user.id)
         raise HTTPException(status_code=409, detail=f"Ya existe un proyecto con slug '{slug}'")
     project = Project(
         name=data.name,

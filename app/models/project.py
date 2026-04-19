@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import DateTime, JSON, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, JSON, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.common import Base, TimestampMixin
@@ -10,13 +10,14 @@ TRASH_RETENTION_DAYS = 30
 
 class Project(Base, TimestampMixin):
     __tablename__ = "projects"
+    __table_args__ = (UniqueConstraint("user_id", "slug", name="uq_projects_user_slug"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    slug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text)
     tech_stack: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)

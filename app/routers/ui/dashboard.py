@@ -168,6 +168,15 @@ def project_edit_save(
     return Response(status_code=200, headers={"HX-Redirect": "/"})
 
 
+def _unique_slug(db: Session, base_slug: str, user_id: int) -> str:
+    slug = base_slug
+    counter = 2
+    while db.query(Project).filter(Project.slug == slug, Project.user_id == user_id).first():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+    return slug
+
+
 @router.post("/ui/projects/new")
 def create_project_form(
     request: Request,
@@ -178,7 +187,7 @@ def create_project_form(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
-    slug = slugify(name)
+    slug = _unique_slug(db, slugify(name), current_user.id)
     tech_stack = [t.strip() for t in tech_stack_raw.split(",") if t.strip()]
     project = Project(
         name=name,

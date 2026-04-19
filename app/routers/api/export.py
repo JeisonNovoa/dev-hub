@@ -22,8 +22,18 @@ def export_all(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    projects = db.query(Project).filter(Project.user_id == current_user.id).order_by(Project.name).all()
-    credentials = db.query(Credential).filter(Credential.user_id == current_user.id).order_by(Credential.label).all()
+    projects = (
+        db.query(Project)
+        .filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
+        .order_by(Project.name)
+        .all()
+    )
+    credentials = (
+        db.query(Credential)
+        .filter(Credential.user_id == current_user.id, Credential.deleted_at.is_(None))
+        .order_by(Credential.label)
+        .all()
+    )
     services = db.query(Service).filter(Service.user_id == current_user.id).order_by(Service.name).all()
 
     projects_data = []
