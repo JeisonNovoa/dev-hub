@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=1776619065" />
+  <link rel="stylesheet" href="/static/style.css?v=1776621132" />
 
   <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
@@ -45,12 +45,27 @@
       </a>
       <a href="/credentials"
          class="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors
-           {% if '/credentials' in request.url.path %}bg-surface border border-surface-border text-gray-100{% else %}text-gray-400 hover:text-gray-100 hover:bg-surface{% endif %}">
+           {% if '/credentials' in request.url.path and '/trash' not in request.url.path %}bg-surface border border-surface-border text-gray-100{% else %}text-gray-400 hover:text-gray-100 hover:bg-surface{% endif %}">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
             d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
         </svg>
         Credenciales
+      </a>
+      <a href="/trash"
+         class="flex items-center justify-between gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors
+           {% if request.url.path == '/trash' %}bg-surface border border-surface-border text-gray-100{% else %}text-gray-400 hover:text-gray-100 hover:bg-surface{% endif %}">
+        <span class="flex items-center gap-2.5">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Papelera
+        </span>
+        <span hx-get="/ui/trash/count"
+              hx-trigger="load"
+              hx-swap="innerHTML"
+              hx-target="this"></span>
       </a>
     </nav>
 

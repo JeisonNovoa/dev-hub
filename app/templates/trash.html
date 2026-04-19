@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Papelera — Dev Hub{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="flex items-center gap-3 mb-6">
+  <h1 class="text-lg font-mono font-semibold text-gray-100">papelera/</h1>
+</div>
+
+<!-- Banner informativo -->
+<div class="flex items-start gap-3 px-4 py-3 mb-8 rounded-lg bg-amber-900/20 border border-amber-700/40">
+  <svg class="w-4 h-4 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+  </svg>
+  <p class="text-sm text-amber-300/80">
+    Los elementos se eliminan automáticamente después de
+    <span class="font-semibold text-amber-300">{{ trash_days }} días</span>
+    desde su eliminación. Restaura o elimina permanentemente antes de que expire el plazo.
+  </p>
+</div>
+
+{% if not projects and not credentials %}
+<!-- Empty state global -->
+<div class="flex flex-col items-center justify-center py-28 text-center">
+  <div class="w-14 h-14 rounded-2xl bg-surface-card border border-surface-border flex items-center justify-center mb-4">
+    <svg class="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  </div>
+  <p class="text-gray-400 font-medium mb-1">La papelera está vacía</p>
+  <p class="text-sm text-gray-600">Nada eliminado por aquí.</p>
+</div>
+
+{% else %}
+
+<!-- ── Sección: Proyectos ───────────────────────────── -->
+<div class="mb-10">
+  <div class="flex items-center gap-3 mb-5">
+    <svg class="w-3.5 h-3.5 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+    <span class="text-xs font-mono uppercase tracking-widest text-gray-500">Proyectos</span>
+    {% if projects %}
+    <span class="text-xs px-1.5 py-0.5 rounded font-mono bg-surface-border text-gray-400">{{ projects | length }}</span>
+    {% endif %}
+    <div class="flex-1 h-px bg-surface-border"></div>
+  </div>
+
+  {% if projects %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for project in projects %}
+    {% set days = project.days_until_purge %}
+    <div id="trash-proj-{{ project.slug }}"
+         class="bg-surface-card border border-surface-border rounded-xl p-5 opacity-75 hover:opacity-100 transition-opacity duration-200">
+
+      <div class="flex items-start justify-between mb-2">
+        <h3 class="font-mono font-semibold text-gray-300 truncate mr-3 text-sm">{{ project.name }}</h3>
+        {% if days is not none %}
+        <span class="shrink-0 text-xs px-2 py-0.5 rounded font-mono font-medium
+          {% if days <= 3 %}bg-red-900/50 text-red-400
+          {% elif days <= 7 %}bg-amber-900/50 text-amber-400
+          {% else %}bg-surface-border text-gray-500{% endif %}">
+          {% if days == 0 %}expira hoy{% elif days == 1 %}1 día{% else %}{{ days }} días{% endif %}
+        </span>
+        {% endif %}
+      </div>
+
+      {% if project.status %}
+      <span class="inline-flex items-center mb-3 text-xs px-2 py-0.5 rounded font-mono font-medium opacity-50
+        {% if project.status == 'active' %}bg-accent/10 text-accent border border-accent/20
+        {% elif project.status == 'paused' %}bg-yellow-500/10 text-yellow-400 border border-yellow-500/20
+        {% else %}bg-gray-800/60 text-gray-500 border border-gray-700{% endif %}">
+        {% if project.status == 'active' %}● activo
+        {% elif project.status == 'paused' %}⏸ pausado
+        {% else %}— archivado{% endif %}
+      </span>
+      {% endif %}
+
+      {% if project.description %}
+      <p class="text-xs text-gray-600 mb-3 line-clamp-2 leading-relaxed">{{ project.description }}</p>
+      {% endif %}
+
+      {% if project.tech_stack %}
+      <div class="flex flex-wrap gap-1 mb-3">
+        {% for tech in project.tech_stack %}
+        <span class="text-xs px-1.5 py-0.5 rounded font-mono bg-surface border border-surface-border text-gray-600">{{ tech }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <p class="text-xs text-gray-700 font-mono mb-4">
+        eliminado {{ project.deleted_at.strftime('%d/%m/%Y') if project.deleted_at else '' }}
+      </p>
+
+      <div class="flex gap-2">
+        <button
+          hx-post="/ui/projects/{{ project.slug }}/restore"
+          hx-target="#trash-proj-{{ project.slug }}"
+          hx-swap="outerHTML"
+          hx-confirm="¿Restaurar '{{ project.name }}'?"
+          class="flex-1 text-xs py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors font-medium">
+          restaurar
+        </button>
+        <button
+          hx-post="/ui/projects/{{ project.slug }}/permanent"
+          hx-target="#trash-proj-{{ project.slug }}"
+          hx-swap="outerHTML"
+          hx-confirm="¿Eliminar '{{ project.name }}' permanentemente? Esta acción no se puede deshacer."
+          class="flex-1 text-xs py-1.5 rounded-lg bg-red-900/20 border border-red-800/40 text-red-400 hover:bg-red-900/40 transition-colors font-medium">
+          eliminar para siempre
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="flex items-center gap-3 py-6 px-4 rounded-lg border border-surface-border/50 text-gray-700">
+    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+        d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+    <span class="text-sm">Sin proyectos eliminados.</span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Sección: Credenciales ──────────────────────────── -->
+<div>
+  <div class="flex items-center gap-3 mb-5">
+    <svg class="w-3.5 h-3.5 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+    </svg>
+    <span class="text-xs font-mono uppercase tracking-widest text-gray-500">Credenciales</span>
+    {% if credentials %}
+    <span class="text-xs px-1.5 py-0.5 rounded font-mono bg-surface-border text-gray-400">{{ credentials | length }}</span>
+    {% endif %}
+    <div class="flex-1 h-px bg-surface-border"></div>
+  </div>
+
+  {% if credentials %}
+  <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-surface-border">
+          <th class="px-4 py-3 text-left text-xs font-mono text-gray-600 uppercase tracking-widest">nombre</th>
+          <th class="px-4 py-3 text-left text-xs font-mono text-gray-600 uppercase tracking-widest hidden sm:table-cell">usuario</th>
+          <th class="px-4 py-3 text-left text-xs font-mono text-gray-600 uppercase tracking-widest hidden sm:table-cell">categoría</th>
+          <th class="px-4 py-3 text-left text-xs font-mono text-gray-600 uppercase tracking-widest">eliminado</th>
+          <th class="px-4 py-3 text-left text-xs font-mono text-gray-600 uppercase tracking-widest">expira</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-border">
+        {% for cred in credentials %}
+        {% set days = cred.days_until_purge %}
+        <tr id="trash-row-{{ cred.id }}" class="hover:bg-surface-hover transition-colors opacity-75 hover:opacity-100">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              {% if cred.url %}
+              <img src="https://www.google.com/s2/favicons?domain={{ cred.url | domain }}&sz=32"
+                   class="w-4 h-4 rounded shrink-0 opacity-50"
+                   onerror="this.style.display='none'" loading="lazy" />
+              {% else %}
+              <span class="w-4 h-4 shrink-0 rounded bg-surface-border flex items-center justify-center text-gray-600 text-xs">?</span>
+              {% endif %}
+              <span class="text-gray-300 font-medium">{{ cred.label }}</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 hidden sm:table-cell">
+            <span class="text-gray-600 font-mono text-xs">{{ cred.username or '—' }}</span>
+          </td>
+          <td class="px-4 py-3 hidden sm:table-cell">
+            <span class="text-xs px-2 py-0.5 rounded font-mono opacity-50
+              {% if cred.category == 'personal' %}bg-blue-900/50 text-blue-400
+              {% elif cred.category == 'project' %}bg-accent/10 text-accent
+              {% else %}bg-orange-900/50 text-orange-400{% endif %}">
+              {{ cred.category }}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="text-xs text-gray-600 font-mono">
+              {{ cred.deleted_at.strftime('%d/%m/%Y') if cred.deleted_at else '—' }}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            {% if days is not none %}
+            <span class="text-xs px-2 py-0.5 rounded font-mono font-medium
+              {% if days <= 3 %}bg-red-900/50 text-red-400
+              {% elif days <= 7 %}bg-amber-900/50 text-amber-400
+              {% else %}bg-surface-border text-gray-500{% endif %}">
+              {% if days == 0 %}hoy{% elif days == 1 %}1 día{% else %}{{ days }} días{% endif %}
+            </span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-1.5 justify-end">
+              <button
+                hx-post="/ui/credentials/{{ cred.id }}/restore"
+                hx-target="#trash-row-{{ cred.id }}"
+                hx-swap="outerHTML"
+                hx-confirm="¿Restaurar '{{ cred.label }}'?"
+                class="text-xs px-2.5 py-1 rounded bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors font-medium">
+                restaurar
+              </button>
+              <button
+                hx-post="/ui/credentials/{{ cred.id }}/permanent"
+                hx-target="#trash-row-{{ cred.id }}"
+                hx-swap="outerHTML"
+                hx-confirm="¿Eliminar '{{ cred.label }}' permanentemente?"
+                class="text-xs px-2.5 py-1 rounded bg-red-900/20 border border-red-800/40 text-red-400 hover:bg-red-900/40 transition-colors font-medium">
+                eliminar
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <div class="flex items-center gap-3 py-6 px-4 rounded-lg border border-surface-border/50 text-gray-700">
+    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+    </svg>
+    <span class="text-sm">Sin credenciales eliminadas.</span>
+  </div>
+  {% endif %}
+</div>
+
+{% endif %}
+{% endblock %}

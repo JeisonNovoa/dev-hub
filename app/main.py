@@ -9,7 +9,7 @@ from app.logging_config import configure_logging
 from app.routers.api import commands, credentials, env_vars, export, links, projects, repos, services
 from app.routers.ui import auth as ui_auth
 from app.routers.ui import credentials as ui_credentials
-from app.routers.ui import dashboard, project_detail
+from app.routers.ui import dashboard, project_detail, trash as ui_trash
 
 configure_logging(debug=settings.debug)
 
@@ -50,6 +50,7 @@ app.include_router(credentials.router, prefix="/api/credentials", tags=["credent
 app.include_router(export.router, prefix="/api/export", tags=["export"])
 
 # UI routers — devuelven HTML
+app.include_router(ui_trash.router)
 app.include_router(dashboard.router)
 app.include_router(project_detail.router)
 app.include_router(ui_credentials.router)

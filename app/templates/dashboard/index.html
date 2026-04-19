@@ -8,22 +8,10 @@
     proyectos/
     <span class="text-gray-500 font-normal text-sm ml-1">{{ projects | length }} resultado{% if projects | length != 1 %}s{% endif %}</span>
   </h1>
-  <div class="flex items-center gap-3">
-    <a href="/projects/trash"
-       class="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-surface-border text-gray-500 hover:text-gray-300 hover:border-gray-500 transition-colors">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-      </svg>
-      papelera
-      {% if trash_count %}
-      <span class="text-xs px-1.5 py-0.5 rounded-full bg-red-900/60 text-red-400 font-mono leading-none">{{ trash_count }}</span>
-      {% endif %}
-    </a>
-    <button onclick="document.getElementById('new-project-modal').classList.remove('hidden')"
-            class="text-sm px-4 py-2 rounded-lg bg-accent text-black hover:bg-accent-dim font-semibold transition-colors">
-      + nuevo proyecto
-    </button>
-  </div>
+  <button onclick="document.getElementById('new-project-modal').classList.remove('hidden')"
+          class="text-sm px-4 py-2 rounded-lg bg-accent text-black hover:bg-accent-dim font-semibold transition-colors">
+    + nuevo proyecto
+  </button>
 </div>
 
 <!-- Filtros -->
@@ -73,7 +61,7 @@
 </div>
 
 <!-- Grid de proyectos -->
-<div id="project-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+<div id="project-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
   {% include "partials/project_cards.html" %}
 </div>
 

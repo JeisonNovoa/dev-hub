@@ -40,11 +40,6 @@ def dashboard(
     projects = [p for p in all_projects if not status or p.status == status]
     projects.sort(key=lambda p: p.name)
 
-    trash_count = (
-        db.query(Project)
-        .filter(Project.user_id == current_user.id, Project.deleted_at.isnot(None))
-        .count()
-    )
     return templates.TemplateResponse(
         "dashboard/index.html",
         {
@@ -53,34 +48,14 @@ def dashboard(
             "q": q,
             "status_filter": status,
             "status_counts": status_counts,
-            "trash_count": trash_count,
             "current_user": current_user,
         },
     )
 
 
 @router.get("/projects/trash", response_class=HTMLResponse)
-def projects_trash_page(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> HTMLResponse:
-    _purge_expired_projects(db)
-    projects = (
-        db.query(Project)
-        .filter(Project.user_id == current_user.id, Project.deleted_at.isnot(None))
-        .order_by(Project.deleted_at)
-        .all()
-    )
-    return templates.TemplateResponse(
-        "dashboard/trash.html",
-        {
-            "request": request,
-            "projects": projects,
-            "trash_days": TRASH_RETENTION_DAYS,
-            "current_user": current_user,
-        },
-    )
+def projects_trash_page() -> RedirectResponse:
+    return RedirectResponse(url="/trash", status_code=301)
 
 
 @router.post("/ui/projects/{slug}/trash", response_class=HTMLResponse)

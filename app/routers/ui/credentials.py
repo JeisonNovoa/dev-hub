@@ -48,27 +48,8 @@ def credentials_page(
 
 
 @router.get("/credentials/trash", response_class=HTMLResponse)
-def trash_page(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> HTMLResponse:
-    _purge_expired(db)
-    credentials = (
-        db.query(Credential)
-        .filter(Credential.user_id == current_user.id, Credential.deleted_at.isnot(None))
-        .order_by(Credential.deleted_at)
-        .all()
-    )
-    return templates.TemplateResponse(
-        "credentials/trash.html",
-        {
-            "request": request,
-            "credentials": credentials,
-            "trash_days": TRASH_RETENTION_DAYS,
-            "current_user": current_user,
-        },
-    )
+def trash_page() -> RedirectResponse:
+    return RedirectResponse(url="/trash", status_code=301)
 
 
 @router.post("/ui/credentials/{cred_id}/trash", response_class=HTMLResponse)
