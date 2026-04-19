@@ -15,7 +15,7 @@
   <form hx-post="/ui/projects/{{ project.slug }}/edit-save" class="px-6 py-5 space-y-5"
         x-data="{
           status: '{{ project.status }}',
-          techStack: {{ project.tech_stack | tojson }},
+          techStack: {{ project.tech_stack | tojson | forceescape }},
           techInput: '',
           addTech() {
             const v = this.techInput.trim();
