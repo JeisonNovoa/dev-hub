@@ -1,32 +1,50 @@
-<div id="repo-new" class="border border-surface-border rounded-xl bg-surface-hover p-4">
+<div id="repo-new" class="border-b border-surface-border px-5 py-4">
   <form hx-post="/ui/projects/{{ slug }}/repos/new"
         hx-target="#repo-new"
         hx-swap="outerHTML"
-        class="space-y-2">
-    <div class="flex gap-2">
+        class="space-y-3">
+
+    <p class="text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">nuevo repositorio</p>
+
+    <div>
+      <label class="block text-xs text-gray-600 font-mono mb-1">Nombre</label>
       <input name="name" required autofocus
-             placeholder="Nombre del repo (ej: englishcode-ai-chatbot-backend)"
-             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
+             placeholder="ej: englishcode-ai-chatbot-backend"
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm font-mono text-gray-200 focus:outline-none focus:border-accent/50 transition-colors" />
     </div>
-    <input name="local_path"
-           placeholder="Ruta local (ej: C:/Users/jeiso/Desktop/englishcode/test_agents-1)"
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-gray-400 focus:outline-none focus:border-accent/60" />
-    <input name="github_url" type="url"
-           placeholder="URL de GitHub (opcional)"
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
-    <input name="description"
-           placeholder="Descripción breve"
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
-    <div class="flex gap-2">
-      <button type="submit"
-              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
-        Agregar repo
-      </button>
+
+    <div>
+      <label class="block text-xs text-gray-600 font-mono mb-1">Ruta local <span class="text-gray-700">(opcional)</span></label>
+      <input name="local_path"
+             placeholder="C:/Users/jeiso/Desktop/proyecto/repo"
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm font-mono text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div>
+      <label class="block text-xs text-gray-600 font-mono mb-1">GitHub URL <span class="text-gray-700">(opcional)</span></label>
+      <input name="github_url" type="url"
+             placeholder="https://github.com/usuario/repo"
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div>
+      <label class="block text-xs text-gray-600 font-mono mb-1">Descripción <span class="text-gray-700">(opcional)</span></label>
+      <input name="description"
+             placeholder="Descripción breve del repo"
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div class="flex gap-2 pt-1">
       <button type="button"
               onclick="this.closest('#repo-new').remove()"
-              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+              class="flex-1 text-sm font-mono px-3 py-2 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors">
         Cancelar
       </button>
+      <button type="submit"
+              class="flex-1 text-sm font-mono font-semibold px-3 py-2 rounded-lg bg-accent hover:bg-accent-dim text-black transition-colors">
+        Agregar repo
+      </button>
     </div>
+
   </form>
 </div>

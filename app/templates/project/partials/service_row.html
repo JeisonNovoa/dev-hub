@@ -1,32 +1,64 @@
-<div id="service-row-{{ service.id }}" class="px-5 py-3 flex items-start gap-3 group">
+{% set cat_dot = {
+  'ai':         'bg-purple-400',
+  'auth':       'bg-blue-400',
+  'storage':    'bg-orange-400',
+  'db':         'bg-cyan-400',
+  'deploy':     'bg-green-400',
+  'messaging':  'bg-yellow-400',
+  'monitoring': 'bg-red-400',
+  'other':      'bg-gray-500'
+} %}
+{% set cat_label = {
+  'ai':         'text-purple-400',
+  'auth':       'text-blue-400',
+  'storage':    'text-orange-400',
+  'db':         'text-cyan-400',
+  'deploy':     'text-green-400',
+  'messaging':  'text-yellow-400',
+  'monitoring': 'text-red-400',
+  'other':      'text-gray-500'
+} %}
+<div id="service-row-{{ service.id }}"
+     class="group flex items-center gap-3 px-4 py-3 bg-surface border border-surface-border rounded-lg"
+     x-data="{ confirming: false }" @mouseleave="confirming = false">
+
+  <!-- Dot -->
+  <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ cat_dot.get(service.category, 'bg-gray-500') }}"></span>
+
+  <!-- Info -->
   <div class="flex-1 min-w-0">
-    <div class="flex items-center gap-2 mb-0.5">
-      {% set cat_colors = {
-        'ai': 'bg-purple-900/50 text-purple-400',
-        'auth': 'bg-blue-900/50 text-blue-400',
-        'storage': 'bg-orange-900/50 text-orange-400',
-        'db': 'bg-cyan-900/50 text-cyan-400',
-        'deploy': 'bg-green-900/50 text-green-400',
-        'messaging': 'bg-yellow-900/50 text-yellow-400',
-        'monitoring': 'bg-red-900/50 text-red-400',
-        'other': 'bg-gray-800 text-gray-500'
-      } %}
-      <span class="text-xs px-1.5 py-0.5 rounded {{ cat_colors.get(service.category, 'bg-gray-800 text-gray-500') }}">
-        {{ service.category }}
-      </span>
+    <div class="flex items-center gap-1.5">
       {% if service.url %}
       <a href="{{ service.url }}" target="_blank" rel="noopener"
-         class="font-medium text-sm text-accent hover:underline truncate">
+         class="font-semibold text-sm text-gray-100 hover:text-accent transition-colors truncate">
         {{ service.name }}
       </a>
       {% else %}
-      <span class="font-medium text-sm text-gray-200">{{ service.name }}</span>
+      <span class="font-semibold text-sm text-gray-100 truncate">{{ service.name }}</span>
       {% endif %}
     </div>
     {% if service.notes %}
-    <p class="text-xs text-gray-500 leading-relaxed mt-0.5">{{ service.notes }}</p>
+    <p class="text-xs text-gray-500 mt-0.5 leading-relaxed truncate">{{ service.notes }}</p>
     {% endif %}
   </div>
+
+  <!-- Categoría + link -->
+  <div class="flex items-center gap-2 shrink-0">
+    <span class="text-xs font-mono {{ cat_label.get(service.category, 'text-gray-500') }}">
+      {{ service.category | title }}
+    </span>
+    {% if service.url %}
+    <a href="{{ service.url }}" target="_blank" rel="noopener"
+       class="text-gray-600 hover:text-accent transition-colors" title="{{ service.url }}">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      </svg>
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- Acciones hover -->
   <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
     <button
       hx-get="/ui/projects/{{ project.slug }}/services/{{ service.id }}/edit"
@@ -37,15 +69,18 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
       </svg>
     </button>
-    <button
-      hx-delete="/api/services/{{ service.id }}"
-      hx-target="#service-row-{{ service.id }}"
-      hx-swap="outerHTML"
-      hx-confirm="¿Eliminar '{{ service.name }}'?"
-      class="text-gray-600 hover:text-red-400 transition-colors p-1 rounded hover:bg-surface">
+    <button x-show="!confirming" @click.stop="confirming = true"
+            class="text-gray-600 hover:text-red-400 transition-colors p-1 rounded hover:bg-surface">
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
+    </button>
+    <button x-show="confirming" style="display:none"
+            hx-delete="/api/services/{{ service.id }}"
+            hx-target="#service-row-{{ service.id }}"
+            hx-swap="outerHTML"
+            class="text-xs font-mono px-2 py-1 rounded bg-red-900/40 border border-red-700/40 text-red-400 hover:bg-red-900/70 transition-colors">
+      confirmar
     </button>
   </div>
 </div>

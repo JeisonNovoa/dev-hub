@@ -1,32 +1,47 @@
-<div id="link-new" class="px-5 py-3 bg-surface-hover">
+<div id="link-new" class="border-b border-surface-border px-5 py-4">
   <form hx-post="/ui/projects/{{ slug }}/links/new"
         hx-target="#link-new"
         hx-swap="outerHTML"
-        class="space-y-2">
+        class="space-y-3">
+
+    <p class="text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">nuevo link</p>
+
     <div class="flex gap-2">
-      <input name="label" required autofocus
-             placeholder="Etiqueta (ej: Dashboard)"
-             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
-      <select name="category"
-              class="bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60">
-        {% for cat in ['dashboard','docs','repo','staging','prod','other'] %}
-        <option value="{{ cat }}">{{ cat }}</option>
-        {% endfor %}
-      </select>
+      <div class="flex-1">
+        <label class="block text-xs text-gray-600 font-mono mb-1">Etiqueta</label>
+        <input name="label" required autofocus
+               placeholder="ej: Dashboard, Staging..."
+               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent/50 transition-colors" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 font-mono mb-1">Categoría</label>
+        <select name="category"
+                class="bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-accent/50 transition-colors">
+          {% for cat in ['dashboard','docs','repo','staging','prod','other'] %}
+          <option value="{{ cat }}">{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
-    <input name="url" required type="url"
-           placeholder="https://..."
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
-    <div class="flex gap-2">
-      <button type="submit"
-              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
-        Agregar
-      </button>
+
+    <div>
+      <label class="block text-xs text-gray-600 font-mono mb-1">URL</label>
+      <input name="url" required type="url"
+             placeholder="https://..."
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div class="flex gap-2 pt-1">
       <button type="button"
               onclick="this.closest('#link-new').remove()"
-              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+              class="flex-1 text-sm font-mono px-3 py-2 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors">
         Cancelar
       </button>
+      <button type="submit"
+              class="flex-1 text-sm font-mono font-semibold px-3 py-2 rounded-lg bg-accent hover:bg-accent-dim text-black transition-colors">
+        Agregar link
+      </button>
     </div>
+
   </form>
 </div>

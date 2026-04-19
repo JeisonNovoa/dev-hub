@@ -1,37 +1,124 @@
-<div id="project-header" class="bg-surface-hover rounded-xl p-4 -mx-1">
+<div id="project-header" class="bg-surface-card border border-surface-border rounded-xl p-6"
+     x-data="{
+       status: {{ project.status | tojson | forceescape }},
+       techStack: {{ project.tech_stack | tojson | forceescape }},
+       techInput: '',
+       addTech() {
+         const val = this.techInput.trim().replace(/,$/, '');
+         if (val && !this.techStack.includes(val)) this.techStack.push(val);
+         this.techInput = '';
+       },
+       removeTech(t) { this.techStack = this.techStack.filter(x => x !== t); }
+     }">
+
   <form hx-post="/ui/projects/{{ project.slug }}/header/save"
         hx-target="#project-header"
         hx-swap="outerHTML"
-        class="space-y-3">
-    <div>
-      <label class="block text-xs text-gray-500 mb-1">Nombre</label>
-      <input name="name" value="{{ project.name }}" required
-             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-base font-bold text-gray-100 focus:outline-none focus:border-accent/60" />
-    </div>
-    <div>
-      <label class="block text-xs text-gray-500 mb-1">Descripción</label>
-      <input name="description" value="{{ project.description or '' }}"
-             placeholder="Breve descripción del proyecto..."
-             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/60" />
-    </div>
-    <div>
-      <label class="block text-xs text-gray-500 mb-1">Tech stack <span class="text-gray-600">(separado por comas)</span></label>
-      <input name="tech_stack_raw" value="{{ project.tech_stack | join(', ') }}"
-             placeholder="FastAPI, React, PostgreSQL, Redis..."
-             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/60" />
-    </div>
-    <div class="flex gap-2 pt-1">
-      <button type="submit"
-              class="text-xs px-4 py-1.5 rounded-lg bg-accent hover:bg-accent-dim text-white font-medium transition-colors">
-        Guardar
-      </button>
+        class="space-y-5">
+
+    <!-- Título del form -->
+    <div class="flex items-center justify-between mb-1">
+      <p class="text-xs font-mono text-gray-500">
+        editar / <span class="text-accent">{{ project.name }}</span>
+      </p>
       <button type="button"
               hx-get="/ui/projects/{{ project.slug }}/header/view"
               hx-target="#project-header"
               hx-swap="outerHTML"
-              class="text-xs px-4 py-1.5 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
-        Cancelar
+              class="text-gray-600 hover:text-gray-300 transition-colors p-1 rounded hover:bg-surface">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
       </button>
     </div>
+
+    <!-- Nombre -->
+    <div>
+      <label class="block text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest mb-2">
+        Nombre del proyecto
+      </label>
+      <input name="name" value="{{ project.name }}" required
+             class="w-full bg-surface border border-surface-border rounded-lg px-4 py-3 text-sm font-mono text-gray-100 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <!-- Estado -->
+    <div>
+      <label class="block text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest mb-2">
+        Estado
+      </label>
+      <input type="hidden" name="status" :value="status" />
+      <div class="flex gap-2">
+        <button type="button" @click="status = 'active'"
+                class="text-xs font-mono px-3 py-1.5 rounded-lg border transition-colors"
+                :class="status === 'active'
+                  ? 'bg-accent/10 border-accent/40 text-accent'
+                  : 'bg-surface border-surface-border text-gray-500 hover:border-gray-500 hover:text-gray-300'">
+          activo
+        </button>
+        <button type="button" @click="status = 'paused'"
+                class="text-xs font-mono px-3 py-1.5 rounded-lg border transition-colors"
+                :class="status === 'paused'
+                  ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-400'
+                  : 'bg-surface border-surface-border text-gray-500 hover:border-gray-500 hover:text-gray-300'">
+          pausado
+        </button>
+        <button type="button" @click="status = 'archived'"
+                class="text-xs font-mono px-3 py-1.5 rounded-lg border transition-colors"
+                :class="status === 'archived'
+                  ? 'bg-gray-700/50 border-gray-600 text-gray-300'
+                  : 'bg-surface border-surface-border text-gray-500 hover:border-gray-500 hover:text-gray-300'">
+          archivado
+        </button>
+      </div>
+    </div>
+
+    <!-- Descripción -->
+    <div>
+      <label class="block text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest mb-2">
+        Descripción
+      </label>
+      <textarea name="description" rows="4"
+                placeholder="Breve descripción del proyecto..."
+                class="w-full bg-surface border border-surface-border rounded-lg px-4 py-3 text-sm text-gray-300 leading-relaxed focus:outline-none focus:border-accent/50 transition-colors resize-none">{{ project.description or '' }}</textarea>
+    </div>
+
+    <!-- Tech stack -->
+    <div>
+      <label class="block text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest mb-2">
+        Tech stack
+      </label>
+      <input type="hidden" name="tech_stack_raw" :value="techStack.join(', ')" />
+      <div class="bg-surface border border-surface-border rounded-lg px-4 py-3 min-h-[48px] flex flex-wrap gap-1.5 mb-2">
+        <template x-for="tech in techStack" :key="tech">
+          <span class="inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded bg-accent/10 border border-accent/20 text-accent">
+            <span x-text="tech"></span>
+            <button type="button" @click="removeTech(tech)"
+                    class="text-accent/60 hover:text-accent transition-colors leading-none">×</button>
+          </span>
+        </template>
+        <span x-show="techStack.length === 0" class="text-xs text-gray-600 font-mono">sin tecnologías aún</span>
+      </div>
+      <input type="text" x-model="techInput" placeholder="Buscar tecnología..."
+             @keydown.enter.prevent="addTech()"
+             @keydown.comma.prevent="addTech()"
+             class="w-full bg-surface border border-surface-border rounded-lg px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+      <p class="text-xs text-gray-600 font-mono mt-1">Presiona Enter o coma para agregar</p>
+    </div>
+
+    <!-- Acciones -->
+    <div class="flex gap-3 pt-1">
+      <button type="button"
+              hx-get="/ui/projects/{{ project.slug }}/header/view"
+              hx-target="#project-header"
+              hx-swap="outerHTML"
+              class="flex-1 text-sm font-mono px-4 py-3 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors">
+        Cancelar
+      </button>
+      <button type="submit"
+              class="flex-1 text-sm font-mono font-semibold px-4 py-3 rounded-lg bg-accent hover:bg-accent-dim text-black transition-colors">
+        Guardar cambios
+      </button>
+    </div>
+
   </form>
 </div>

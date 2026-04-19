@@ -31,7 +31,7 @@
       <p class="text-xs text-gray-500 truncate mt-0.5">{{ repo.description }}</p>
       {% endif %}
     </div>
-    <div class="flex items-center gap-1 shrink-0" @click.stop>
+    <div class="flex items-center gap-1 shrink-0" @click.stop x-data="{ confirming: false }" @mouseleave="confirming = false">
       <button
         hx-get="/ui/projects/{{ project.slug }}/repos/{{ repo.id }}/edit"
         hx-target="#repo-card-{{ repo.id }}"
@@ -41,15 +41,18 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
         </svg>
       </button>
-      <button
-        hx-delete="/api/projects/{{ project.slug }}/repos/{{ repo.slug }}"
-        hx-target="#repo-card-{{ repo.id }}"
-        hx-swap="outerHTML"
-        hx-confirm="¿Eliminar repo '{{ repo.name }}'? Se eliminarán sus comandos y variables."
-        class="text-gray-600 hover:text-red-400 transition-colors p-1 rounded hover:bg-surface">
+      <button x-show="!confirming" @click.stop="confirming = true"
+              class="text-gray-600 hover:text-red-400 transition-colors p-1 rounded hover:bg-surface">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
+      </button>
+      <button x-show="confirming" style="display:none"
+              hx-delete="/api/projects/{{ project.slug }}/repos/{{ repo.slug }}"
+              hx-target="#repo-card-{{ repo.id }}"
+              hx-swap="outerHTML"
+              class="text-xs font-mono px-2 py-1 rounded bg-red-900/40 border border-red-700/40 text-red-400 hover:bg-red-900/70 transition-colors">
+        confirmar
       </button>
     </div>
   </div>

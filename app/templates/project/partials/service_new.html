@@ -1,35 +1,54 @@
-<div id="service-new" class="px-5 py-3 bg-surface-hover">
+<div id="service-new" class="px-5 py-4 border-b border-surface-border">
   <form hx-post="/ui/projects/{{ slug }}/services/new"
         hx-target="#service-new"
         hx-swap="outerHTML"
-        class="space-y-2">
+        class="space-y-3">
+
+    <p class="text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">nuevo servicio</p>
+
     <div class="flex gap-2">
-      <input name="name" required autofocus
-             placeholder="Ej: OpenAI, ElevenLabs, Cartesia..."
-             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
-      <select name="category"
-              class="bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60">
-        {% for cat in ['ai','auth','storage','db','deploy','messaging','monitoring','other'] %}
-        <option value="{{ cat }}">{{ cat }}</option>
-        {% endfor %}
-      </select>
+      <div class="flex-1">
+        <label class="block text-xs text-gray-600 font-mono mb-1">Nombre</label>
+        <input name="name" required autofocus
+               placeholder="Ej: OpenAI, Supabase, Vercel..."
+               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent/50 transition-colors" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 font-mono mb-1">Tipo</label>
+        <select name="category"
+                class="bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-accent/50 transition-colors">
+          {% for cat in ['ai','auth','storage','db','deploy','messaging','monitoring','other'] %}
+          <option value="{{ cat }}">{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
-    <input name="url" type="url"
-           placeholder="URL del dashboard (opcional)"
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
-    <input name="notes"
-           placeholder="Notas (plan, límites, cuenta usada...)"
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
-    <div class="flex gap-2">
-      <button type="submit"
-              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
-        Agregar
-      </button>
+
+    <div>
+      <label class="block text-xs text-gray-600 font-mono mb-1">URL <span class="text-gray-700">(opcional)</span></label>
+      <input name="url" type="url"
+             placeholder="https://dashboard.openai.com"
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div>
+      <label class="block text-xs text-gray-600 font-mono mb-1">Notas <span class="text-gray-700">(opcional)</span></label>
+      <input name="notes"
+             placeholder="Plan, cuenta usada, límites..."
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div class="flex gap-2 pt-1">
       <button type="button"
               onclick="this.closest('#service-new').remove()"
-              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+              class="flex-1 text-sm font-mono px-3 py-2 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors">
         Cancelar
       </button>
+      <button type="submit"
+              class="flex-1 text-sm font-mono font-semibold px-3 py-2 rounded-lg bg-accent hover:bg-accent-dim text-black transition-colors">
+        Agregar
+      </button>
     </div>
+
   </form>
 </div>
