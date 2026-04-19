@@ -27,7 +27,10 @@
 </div>
 
 <!-- Filtros -->
-<div class="flex flex-col sm:flex-row gap-3 mb-6" x-data>
+<div class="flex flex-col sm:flex-row gap-3 mb-6">
+  <!-- Input oculto que mantiene el filtro activo; lo leen el buscador y los tabs -->
+  <input type="hidden" id="sf" name="status" value="{{ status_filter }}">
+
   <input
     type="search"
     name="q"
@@ -38,7 +41,7 @@
     hx-trigger="input changed delay:300ms"
     hx-target="#project-grid"
     hx-swap="innerHTML"
-    hx-include="[name='status-filter']"
+    hx-include="#sf"
   />
 
   <!-- Tabs de status -->
@@ -52,16 +55,14 @@
     {% for val, label, count in tabs %}
     <button
       type="button"
-      name="status-filter"
-      value="{{ val }}"
       hx-get="/ui/dashboard/cards"
       hx-trigger="click"
       hx-target="#project-grid"
       hx-swap="innerHTML"
-      hx-include="[name='q']"
-      onclick="document.querySelectorAll('[name=status-filter]').forEach(b => b.dataset.active = 'false'); this.dataset.active = 'true'"
+      hx-include="#sf,[name='q']"
+      onclick="document.getElementById('sf').value='{{ val }}'; document.querySelectorAll('.status-tab').forEach(b => b.dataset.active='false'); this.dataset.active='true'"
       data-active="{{ 'true' if status_filter == val else 'false' }}"
-      class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-mono transition-colors
+      class="status-tab flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-mono transition-colors
         data-[active=true]:bg-surface data-[active=true]:text-gray-100 data-[active=true]:border data-[active=true]:border-surface-border
         data-[active=false]:text-gray-500 data-[active=false]:hover:text-gray-300">
       {{ label }}

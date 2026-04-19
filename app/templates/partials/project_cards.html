@@ -1,9 +1,10 @@
 {% for project in projects %}
-<div id="proj-card-{{ project.slug }}" class="relative group">
+<div id="proj-card-{{ project.slug }}" class="relative group" x-data="{ confirming: false }" @mouseleave="confirming = false">
 
-  <!-- Acciones en hover: fuera del <a> para no romper el layout -->
+  <!-- Acciones en hover -->
   <div class="absolute top-3 right-3 z-10 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
     <button type="button"
+            @click="confirming = false"
             hx-get="/ui/projects/{{ project.slug }}/edit-modal"
             hx-target="#edit-project-modal"
             hx-swap="innerHTML"
@@ -15,34 +16,40 @@
       </svg>
       editar
     </button>
-    <button
-      hx-post="/ui/projects/{{ project.slug }}/trash"
-      hx-target="#proj-card-{{ project.slug }}"
-      hx-swap="outerHTML"
-      hx-confirm="¿Mover '{{ project.name }}' a la papelera?"
-      class="p-1.5 rounded-md bg-surface-card border border-surface-border text-gray-500 hover:text-red-400 hover:border-red-800/50 transition-colors"
-      title="Mover a papelera">
+
+    <!-- Papelera: normal -->
+    <button type="button" x-show="!confirming" @click.stop="confirming = true"
+            class="p-1.5 rounded-md bg-surface-card border border-surface-border text-gray-500 hover:text-red-400 hover:border-red-800/50 transition-colors"
+            title="Mover a papelera">
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
       </svg>
     </button>
+
+    <!-- Papelera: confirmar -->
+    <button x-show="confirming" style="display:none"
+            hx-post="/ui/projects/{{ project.slug }}/trash"
+            hx-target="#proj-card-{{ project.slug }}"
+            hx-swap="outerHTML"
+            class="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-red-900/20 border border-red-800/40 text-red-400 hover:bg-red-900/40 hover:text-red-300 transition-colors font-sans">
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+      confirmar
+    </button>
   </div>
 
   <a href="/projects/{{ project.slug }}"
-     class="block bg-surface-card border-l-2 border border-surface-border rounded-xl p-5 transition-all duration-200
-       hover:-translate-y-0.5 hover:bg-surface-hover hover:shadow-lg
-       {% if project.status == 'active' %}border-l-accent
-       {% elif project.status == 'paused' %}border-l-yellow-500
-       {% else %}border-l-gray-600{% endif %}"
-     style="{% if project.status == 'active' %}--tw-shadow-color: rgba(34,197,94,0.08);{% elif project.status == 'paused' %}--tw-shadow-color: rgba(234,179,8,0.06);{% endif %}">
+     class="block bg-surface-card border border-surface-border rounded-xl p-5 transition-colors duration-200 hover:border-gray-600">
 
     <!-- Nombre -->
     <h3 class="font-mono font-semibold text-gray-100 group-hover:text-accent transition-colors truncate text-sm mb-1.5 pr-28">
       <span class="text-accent opacity-70 mr-1">▸</span>{{ project.name }}
     </h3>
 
-    <!-- Status badge debajo del nombre -->
+    <!-- Status badge -->
     <span class="inline-flex items-center mb-3 text-xs px-2 py-0.5 rounded font-mono font-medium
       {% if project.status == 'active' %}bg-accent/10 text-accent border border-accent/20
       {% elif project.status == 'paused' %}bg-yellow-500/10 text-yellow-400 border border-yellow-500/20
@@ -52,7 +59,7 @@
       {% else %}— archivado{% endif %}
     </span>
 
-    <!-- Description -->
+    <!-- Descripción -->
     {% if project.description %}
     <p class="text-sm text-gray-400 mb-4 line-clamp-2 leading-relaxed">{{ project.description }}</p>
     {% endif %}
