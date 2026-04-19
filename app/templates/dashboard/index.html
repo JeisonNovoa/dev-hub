@@ -4,7 +4,10 @@
 
 {% block content %}
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-  <h1 class="text-lg font-mono font-semibold text-gray-100">proyectos/</h1>
+  <h1 class="text-lg font-mono font-semibold text-gray-100">
+    proyectos/
+    <span class="text-gray-500 font-normal text-sm ml-1">{{ projects | length }} resultado{% if projects | length != 1 %}s{% endif %}</span>
+  </h1>
   <div class="flex items-center gap-3">
     <a href="/projects/trash"
        class="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-surface-border text-gray-500 hover:text-gray-300 hover:border-gray-500 transition-colors">
@@ -17,7 +20,7 @@
       {% endif %}
     </a>
     <button onclick="document.getElementById('new-project-modal').classList.remove('hidden')"
-            class="text-sm px-4 py-2 rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 font-medium transition-colors">
+            class="text-sm px-4 py-2 rounded-lg bg-accent text-black hover:bg-accent-dim font-semibold transition-colors">
       + nuevo proyecto
     </button>
   </div>
@@ -29,27 +32,43 @@
     type="search"
     name="q"
     value="{{ q }}"
-    placeholder="buscar proyectos..."
-    class="flex-1 bg-surface-card border border-surface-border rounded-lg px-4 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/40 transition-colors font-sans"
+    placeholder="Buscar proyectos, tech stack..."
+    class="flex-1 bg-surface-card border border-surface-border rounded-lg px-4 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-accent/40 transition-colors font-sans"
     hx-get="/ui/dashboard/cards"
     hx-trigger="input changed delay:300ms"
     hx-target="#project-grid"
     hx-swap="innerHTML"
     hx-include="[name='status-filter']"
   />
-  <select
-    name="status-filter"
-    class="bg-surface-card border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-accent/40 transition-colors"
-    hx-get="/ui/dashboard/cards"
-    hx-trigger="change"
-    hx-target="#project-grid"
-    hx-swap="innerHTML"
-    hx-include="[name='q']">
-    <option value="" {% if not status_filter %}selected{% endif %}>todos</option>
-    <option value="active"   {% if status_filter == 'active' %}selected{% endif %}>● activos</option>
-    <option value="paused"   {% if status_filter == 'paused' %}selected{% endif %}>⏸ pausados</option>
-    <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>— archivados</option>
-  </select>
+
+  <!-- Tabs de status -->
+  <div class="flex items-center gap-1 bg-surface-card border border-surface-border rounded-lg p-1">
+    {% set tabs = [
+      ("", "todos", status_counts.all),
+      ("active", "activos", status_counts.active),
+      ("paused", "pausados", status_counts.paused),
+      ("archived", "archivados", status_counts.archived),
+    ] %}
+    {% for val, label, count in tabs %}
+    <button
+      type="button"
+      name="status-filter"
+      value="{{ val }}"
+      hx-get="/ui/dashboard/cards"
+      hx-trigger="click"
+      hx-target="#project-grid"
+      hx-swap="innerHTML"
+      hx-include="[name='q']"
+      onclick="document.querySelectorAll('[name=status-filter]').forEach(b => b.dataset.active = 'false'); this.dataset.active = 'true'"
+      data-active="{{ 'true' if status_filter == val else 'false' }}"
+      class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-mono transition-colors
+        data-[active=true]:bg-surface data-[active=true]:text-gray-100 data-[active=true]:border data-[active=true]:border-surface-border
+        data-[active=false]:text-gray-500 data-[active=false]:hover:text-gray-300">
+      {{ label }}
+      <span class="font-mono">{{ count }}</span>
+    </button>
+    {% endfor %}
+  </div>
 </div>
 
 <!-- Grid de proyectos -->
@@ -57,36 +76,99 @@
   {% include "partials/project_cards.html" %}
 </div>
 
+<!-- Modal editar proyecto (contenido cargado via HTMX) -->
+<div id="edit-project-modal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+     onclick="if(event.target===this) this.classList.add('hidden')">
+</div>
+
 <!-- Modal nuevo proyecto -->
-<div id="new-project-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-     x-data @click.self="$el.classList.add('hidden')">
-  <div class="bg-surface-card border border-surface-border rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
-    <h2 class="text-base font-mono font-semibold text-gray-100 mb-5">nuevo proyecto</h2>
-    <form hx-post="/ui/projects/new" class="space-y-4">
+<div id="new-project-modal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+     onclick="if(event.target===this) this.classList.add('hidden')">
+  <div class="bg-surface-card border border-surface-border rounded-xl w-full max-w-lg mx-4 shadow-xl overflow-hidden"
+       x-data="{
+         status: 'active',
+         techStack: [],
+         techInput: '',
+         addTech() {
+           const v = this.techInput.trim();
+           if (v && !this.techStack.includes(v)) this.techStack.push(v);
+           this.techInput = '';
+         },
+         removeTech(t) { this.techStack = this.techStack.filter(x => x !== t); }
+       }">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+      <h2 class="text-sm font-mono font-semibold text-gray-100">nuevo_proyecto/</h2>
+      <button onclick="document.getElementById('new-project-modal').classList.add('hidden')"
+              class="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <form hx-post="/ui/projects/new" class="px-6 py-5 space-y-5">
+      <!-- Nombre -->
       <div>
-        <label class="block text-xs font-mono text-gray-500 mb-1.5">nombre *</label>
-        <input name="name" required placeholder="mi-proyecto"
+        <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Nombre del proyecto</label>
+        <input name="name" required placeholder="mi-proyecto-nuevo"
                class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors font-mono" />
       </div>
+
+      <!-- Estado -->
       <div>
-        <label class="block text-xs font-mono text-gray-500 mb-1.5">descripción</label>
-        <input name="description" placeholder="Breve descripción del proyecto..."
-               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+        <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Estado</label>
+        <input type="hidden" name="status" :value="status" />
+        <div class="flex gap-2">
+          <button type="button" @click="status = 'active'"
+                  :class="status === 'active' ? 'border-accent text-accent bg-accent/10' : 'border-surface-border text-gray-500 hover:border-gray-500 hover:text-gray-300'"
+                  class="px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors">activo</button>
+          <button type="button" @click="status = 'paused'"
+                  :class="status === 'paused' ? 'border-yellow-500 text-yellow-400 bg-yellow-500/10' : 'border-surface-border text-gray-500 hover:border-gray-500 hover:text-gray-300'"
+                  class="px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors">pausado</button>
+          <button type="button" @click="status = 'archived'"
+                  :class="status === 'archived' ? 'border-gray-500 text-gray-300 bg-gray-700/30' : 'border-surface-border text-gray-500 hover:border-gray-500 hover:text-gray-300'"
+                  class="px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors">archivado</button>
+        </div>
       </div>
+
+      <!-- Descripción -->
       <div>
-        <label class="block text-xs font-mono text-gray-500 mb-1.5">tech stack <span class="text-gray-600">(separado por comas)</span></label>
-        <input name="tech_stack_raw" placeholder="FastAPI, React, PostgreSQL"
-               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+        <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Descripción</label>
+        <textarea name="description" rows="3" placeholder="Breve descripción del proyecto..."
+                  class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors resize-none"></textarea>
       </div>
+
+      <!-- Tech Stack -->
+      <div>
+        <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Tech Stack</label>
+        <input type="hidden" name="tech_stack_raw" :value="techStack.join(', ')" />
+        <div class="flex flex-wrap gap-1.5 mb-2" x-show="techStack.length > 0">
+          <template x-for="t in techStack" :key="t">
+            <span class="flex items-center gap-1 text-xs px-2 py-0.5 rounded font-mono bg-accent/10 border border-accent/20 text-accent">
+              <span x-text="t"></span>
+              <button type="button" @click="removeTech(t)" class="hover:text-white leading-none ml-0.5 text-accent/70">×</button>
+            </span>
+          </template>
+        </div>
+        <input type="text" x-model="techInput" placeholder="Buscar tecnología..."
+               @keydown.enter.prevent="addTech()" @keydown.comma.prevent="addTech()"
+               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+        <p class="text-xs text-gray-600 mt-1">Presiona Enter o coma para agregar</p>
+      </div>
+
+      <!-- Botones -->
       <div class="flex gap-3 pt-1">
-        <button type="submit"
-                class="flex-1 py-2 rounded-lg bg-accent hover:bg-accent-dim text-white text-sm font-medium transition-colors">
-          Crear
-        </button>
         <button type="button"
                 onclick="document.getElementById('new-project-modal').classList.add('hidden')"
                 class="flex-1 py-2 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 text-sm transition-colors">
           Cancelar
+        </button>
+        <button type="submit"
+                class="flex-1 py-2 rounded-lg bg-accent hover:bg-accent-dim text-black text-sm font-semibold transition-colors">
+          Crear proyecto
         </button>
       </div>
     </form>

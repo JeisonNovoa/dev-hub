@@ -1,0 +1,90 @@
+<div class="bg-surface-card border border-surface-border rounded-xl w-full max-w-lg mx-4 shadow-xl overflow-hidden">
+  <!-- Header -->
+  <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+    <h2 class="text-sm font-mono font-semibold text-gray-100">
+      editar / <span class="text-accent">{{ project.name }}</span>
+    </h2>
+    <button onclick="document.getElementById('edit-project-modal').classList.add('hidden')"
+            class="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <form hx-post="/ui/projects/{{ project.slug }}/edit-save" class="px-6 py-5 space-y-5"
+        x-data="{
+          status: '{{ project.status }}',
+          techStack: {{ project.tech_stack | tojson }},
+          techInput: '',
+          addTech() {
+            const v = this.techInput.trim();
+            if (v && !this.techStack.includes(v)) this.techStack.push(v);
+            this.techInput = '';
+          },
+          removeTech(t) { this.techStack = this.techStack.filter(x => x !== t); }
+        }">
+
+    <!-- Nombre -->
+    <div>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Nombre del proyecto</label>
+      <input name="name" required value="{{ project.name }}"
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-accent/50 transition-colors font-mono" />
+    </div>
+
+    <!-- Estado -->
+    <div>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">Estado</label>
+      <input type="hidden" name="status" :value="status" />
+      <div class="flex gap-2">
+        <button type="button" @click="status = 'active'"
+                :class="status === 'active' ? 'border-accent text-accent bg-accent/10' : 'border-surface-border text-gray-500 hover:border-gray-500 hover:text-gray-300'"
+                class="px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors">activo</button>
+        <button type="button" @click="status = 'paused'"
+                :class="status === 'paused' ? 'border-yellow-500 text-yellow-400 bg-yellow-500/10' : 'border-surface-border text-gray-500 hover:border-gray-500 hover:text-gray-300'"
+                class="px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors">pausado</button>
+        <button type="button" @click="status = 'archived'"
+                :class="status === 'archived' ? 'border-gray-500 text-gray-300 bg-gray-700/30' : 'border-surface-border text-gray-500 hover:border-gray-500 hover:text-gray-300'"
+                class="px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors">archivado</button>
+      </div>
+    </div>
+
+    <!-- Descripción -->
+    <div>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Descripción</label>
+      <textarea name="description" rows="3" placeholder="Breve descripción del proyecto..."
+                class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors resize-none">{{ project.description or '' }}</textarea>
+    </div>
+
+    <!-- Tech Stack -->
+    <div>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Tech Stack</label>
+      <input type="hidden" name="tech_stack_raw" :value="techStack.join(', ')" />
+      <div class="flex flex-wrap gap-1.5 mb-2" x-show="techStack.length > 0">
+        <template x-for="t in techStack" :key="t">
+          <span class="flex items-center gap-1 text-xs px-2 py-0.5 rounded font-mono bg-accent/10 border border-accent/20 text-accent">
+            <span x-text="t"></span>
+            <button type="button" @click="removeTech(t)" class="hover:text-white leading-none ml-0.5 text-accent/70">×</button>
+          </span>
+        </template>
+      </div>
+      <input type="text" x-model="techInput" placeholder="Buscar tecnología..."
+             @keydown.enter.prevent="addTech()" @keydown.comma.prevent="addTech()"
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+      <p class="text-xs text-gray-600 mt-1">Presiona Enter o coma para agregar</p>
+    </div>
+
+    <!-- Botones -->
+    <div class="flex gap-3 pt-1">
+      <button type="button"
+              onclick="document.getElementById('edit-project-modal').classList.add('hidden')"
+              class="flex-1 py-2 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 text-sm transition-colors">
+        Cancelar
+      </button>
+      <button type="submit"
+              class="flex-1 py-2 rounded-lg bg-accent hover:bg-accent-dim text-black text-sm font-semibold transition-colors">
+        Guardar cambios
+      </button>
+    </div>
+  </form>
+</div>
