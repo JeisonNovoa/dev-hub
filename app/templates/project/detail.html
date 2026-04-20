@@ -50,7 +50,23 @@
         {% include "project/partials/repo_card.html" %}
         {% endfor %}
         {% if not project.repos %}
-        <p class="px-5 py-5 text-sm text-gray-600">Sin repositorios aún.</p>
+        <div id="repos-empty" class="flex flex-col items-center gap-3 py-10 text-center">
+          <svg class="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+          </svg>
+          <div>
+            <p class="text-sm text-gray-500">Sin repositorios aún</p>
+            <p class="text-xs text-gray-700 mt-0.5">Conecta repos para centralizar comandos y variables de entorno</p>
+          </div>
+          <button
+            hx-get="/ui/projects/{{ project.slug }}/repos/new"
+            hx-target="#repos-empty"
+            hx-swap="outerHTML"
+            class="text-xs font-mono px-3 py-1.5 rounded-lg bg-surface border border-surface-border text-accent hover:bg-surface-hover hover:border-accent/30 transition-colors">
+            + agregar repositorio
+          </button>
+        </div>
         {% endif %}
       </div>
     </section>
@@ -95,7 +111,23 @@
           </div></div>
           {% endif %}
         {% else %}
-        <p class="text-sm text-gray-600 py-2">Sin links aún.</p>
+        <div id="links-empty" class="flex flex-col items-center gap-3 py-8 text-center">
+          <svg class="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          <div>
+            <p class="text-sm text-gray-500">Sin links aún</p>
+            <p class="text-xs text-gray-700 mt-0.5">Dashboard, staging, prod, docs — todo en un lugar</p>
+          </div>
+          <button
+            hx-get="/ui/projects/{{ project.slug }}/links/new"
+            hx-target="#links-empty"
+            hx-swap="outerHTML"
+            class="text-xs font-mono px-3 py-1.5 rounded-lg bg-surface border border-surface-border text-accent hover:bg-surface-hover hover:border-accent/30 transition-colors">
+            + agregar link
+          </button>
+        </div>
         {% endif %}
       </div>
     </section>
@@ -139,7 +171,24 @@
             {% include "project/partials/service_row.html" %}
             {% endfor %}
             {% if not project.services %}
-            <p class="px-5 py-5 text-sm text-gray-600">Sin servicios aún.</p>
+            <div id="services-empty" class="flex flex-col items-center gap-3 py-8 text-center">
+              <svg class="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <div>
+                <p class="text-sm text-gray-500">Sin servicios vinculados</p>
+                <p class="text-xs text-gray-700 mt-0.5">OpenAI, Supabase, Vercel y más</p>
+              </div>
+              <button
+                hx-get="/ui/projects/{{ project.slug }}/services/new"
+                hx-target="#services-empty"
+                hx-swap="outerHTML"
+                class="text-xs font-mono px-3 py-1.5 rounded-lg bg-surface border border-surface-border text-accent hover:bg-surface-hover hover:border-accent/30 transition-colors">
+                + agregar servicio
+              </button>
+            </div>
             {% endif %}
           </div>
         </div>
@@ -177,7 +226,23 @@
             {% include "project/partials/credential_item.html" %}
             {% endfor %}
             {% if not project.credentials %}
-            <p class="px-5 py-5 text-sm text-gray-600">Sin credenciales vinculadas.</p>
+            <div id="creds-empty" class="flex flex-col items-center gap-3 py-8 text-center">
+              <svg class="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              <div>
+                <p class="text-sm text-gray-500">Sin credenciales vinculadas</p>
+                <p class="text-xs text-gray-700 mt-0.5">Asocia accesos de este proyecto en un lugar seguro</p>
+              </div>
+              <button
+                hx-get="/ui/projects/{{ project.slug }}/credentials/new"
+                hx-target="#creds-empty"
+                hx-swap="outerHTML"
+                class="text-xs font-mono px-3 py-1.5 rounded-lg bg-surface border border-surface-border text-accent hover:bg-surface-hover hover:border-accent/30 transition-colors">
+                + agregar credencial
+              </button>
+            </div>
             {% endif %}
           </div>
         </div>
