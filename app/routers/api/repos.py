@@ -132,7 +132,9 @@ def update_repo_command(
 ) -> Command:
     project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
-    cmd = db.query(Command).filter(Command.id == cmd_id, Command.repo_id == repo.id).first()
+    cmd = db.query(Command).filter(
+        Command.id == cmd_id, Command.repo_id == repo.id, Command.project_id == project.id
+    ).first()
     if not cmd:
         raise HTTPException(status_code=404, detail="Comando no encontrado")
     for field, value in data.model_dump(exclude_unset=True).items():
@@ -152,7 +154,9 @@ def delete_repo_command(
 ) -> None:
     project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
-    cmd = db.query(Command).filter(Command.id == cmd_id, Command.repo_id == repo.id).first()
+    cmd = db.query(Command).filter(
+        Command.id == cmd_id, Command.repo_id == repo.id, Command.project_id == project.id
+    ).first()
     if not cmd:
         raise HTTPException(status_code=404, detail="Comando no encontrado")
     db.delete(cmd)
@@ -195,7 +199,9 @@ def update_repo_env_var(
 ) -> EnvVariable:
     project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
-    env_var = db.query(EnvVariable).filter(EnvVariable.id == env_id, EnvVariable.repo_id == repo.id).first()
+    env_var = db.query(EnvVariable).filter(
+        EnvVariable.id == env_id, EnvVariable.repo_id == repo.id, EnvVariable.project_id == project.id
+    ).first()
     if not env_var:
         raise HTTPException(status_code=404, detail="Variable no encontrada")
     for field, value in data.model_dump(exclude_unset=True).items():
@@ -215,7 +221,9 @@ def delete_repo_env_var(
 ) -> None:
     project = get_project_or_404(slug, db, current_user)
     repo = _get_repo_or_404(project.id, repo_slug, db)
-    env_var = db.query(EnvVariable).filter(EnvVariable.id == env_id, EnvVariable.repo_id == repo.id).first()
+    env_var = db.query(EnvVariable).filter(
+        EnvVariable.id == env_id, EnvVariable.repo_id == repo.id, EnvVariable.project_id == project.id
+    ).first()
     if not env_var:
         raise HTTPException(status_code=404, detail="Variable no encontrada")
     db.delete(env_var)

@@ -7,7 +7,8 @@
   'monitoring': 'bg-red-900/40 border-red-700/40 text-red-300 hover:bg-red-900/60',
   'other': 'bg-surface border-surface-border text-gray-400 hover:bg-surface-hover',
 } %}
-<div id="link-row-{{ link.id }}" class="relative group/link inline-flex">
+<div id="link-row-{{ link.id }}" class="relative group/link inline-flex"
+     x-data="{ copied: false, confirming: false }" @mouseleave="confirming = false">
   <a href="{{ link.url }}" target="_blank" rel="noopener"
      class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-sans transition-colors
        {{ cat_link_colors.get(link.category | lower, 'bg-surface border-surface-border text-gray-400 hover:bg-surface-hover') }}">
@@ -18,8 +19,7 @@
     {{ link.label }}
   </a>
   <!-- Acciones en hover -->
-  <div class="absolute -top-1 -right-1 hidden group-hover/link:flex items-center gap-0.5 z-10"
-       x-data="{ copied: false }">
+  <div class="absolute -top-1 -right-1 hidden group-hover/link:flex items-center gap-0.5 z-10">
     <button @click.prevent="navigator.clipboard.writeText('{{ link.url }}'); copied = true; setTimeout(() => copied = false, 2000)"
             class="p-1 rounded bg-surface-card border border-surface-border text-gray-500 hover:text-accent transition-colors"
             title="Copiar URL">
@@ -39,15 +39,19 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
       </svg>
     </button>
-    <button
-      hx-delete="/api/projects/{{ project.slug }}/links/{{ link.id }}"
-      hx-target="#link-row-{{ link.id }}"
-      hx-swap="outerHTML"
-      hx-confirm="¿Eliminar este link?"
-      class="p-1 rounded bg-surface-card border border-surface-border text-gray-500 hover:text-red-400 transition-colors">
+    <button x-show="!confirming" @click.prevent="confirming = true"
+            class="p-1 rounded bg-surface-card border border-surface-border text-gray-500 hover:text-red-400 transition-colors"
+            title="Eliminar '{{ link.label }}'">
       <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
+    </button>
+    <button x-show="confirming" style="display:none"
+            hx-delete="/api/projects/{{ project.slug }}/links/{{ link.id }}"
+            hx-target="#link-row-{{ link.id }}"
+            hx-swap="outerHTML"
+            class="text-xs font-mono px-1.5 py-0.5 rounded bg-red-900/40 border border-red-700/40 text-red-400 hover:bg-red-900/70 transition-colors">
+      confirmar
     </button>
   </div>
 </div>
