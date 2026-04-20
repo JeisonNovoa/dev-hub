@@ -2,6 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from slugify import slugify
+from sqlalchemy import Text, cast
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 @router.get("", response_model=Page[ProjectResponse])
 def list_projects(
     status: str | None = None,
+    search: str | None = None,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -25,6 +27,14 @@ def list_projects(
     query = db.query(Project).filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
     if status:
         query = query.filter(Project.status == status)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            Project.name.ilike(like)
+            | Project.description.ilike(like)
+            | Project.notes.ilike(like)
+            | cast(Project.tech_stack, Text).ilike(like)
+        )
     query = query.order_by(Project.name)
     total = query.count()
     items = query.offset(offset).limit(limit).all()

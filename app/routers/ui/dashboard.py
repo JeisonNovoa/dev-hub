@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from slugify import slugify
+from sqlalchemy import Text, cast
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -27,7 +28,12 @@ def dashboard(
     base_query = db.query(Project).filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
     if q:
         like = f"%{q}%"
-        base_query = base_query.filter(Project.name.ilike(like) | Project.description.ilike(like))
+        base_query = base_query.filter(
+            Project.name.ilike(like)
+            | Project.description.ilike(like)
+            | Project.notes.ilike(like)
+            | cast(Project.tech_stack, Text).ilike(like)
+        )
 
     all_projects = base_query.all()
     status_counts = {
@@ -216,7 +222,12 @@ def dashboard_cards(
     base_query = db.query(Project).filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
     if q:
         like = f"%{q}%"
-        base_query = base_query.filter(Project.name.ilike(like) | Project.description.ilike(like))
+        base_query = base_query.filter(
+            Project.name.ilike(like)
+            | Project.description.ilike(like)
+            | Project.notes.ilike(like)
+            | cast(Project.tech_stack, Text).ilike(like)
+        )
 
     all_projects = base_query.all()
     status_counts = {

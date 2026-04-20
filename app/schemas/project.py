@@ -1,6 +1,15 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
+
+
+def _validate_http_url(v: str | None) -> str | None:
+    if v is None:
+        return v
+    v = v.strip()
+    if not v.startswith(("http://", "https://")):
+        raise ValueError("La URL debe comenzar con http:// o https://")
+    return v
 
 
 # --- EnvVariable ---
@@ -64,6 +73,14 @@ class QuickLinkBase(BaseModel):
     url: str
     category: str = "other"
 
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        v = v.strip()
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("La URL debe comenzar con http:// o https://")
+        return v
+
 
 class QuickLinkCreate(QuickLinkBase):
     pass
@@ -73,6 +90,11 @@ class QuickLinkUpdate(BaseModel):
     label: str | None = None
     url: str | None = None
     category: str | None = None
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, v: str | None) -> str | None:
+        return _validate_http_url(v)
 
 
 class QuickLinkResponse(QuickLinkBase):
