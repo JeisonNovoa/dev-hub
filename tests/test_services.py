@@ -19,7 +19,9 @@ def test_list_services_all(client):
     client.post("/api/services", json={"name": "Render", "category": "hosting"})
     res = client.get("/api/services")
     assert res.status_code == 200
-    assert len(res.json()) == 2
+    data = res.json()
+    assert data["total"] == 2
+    assert len(data["items"]) == 2
 
 
 def test_list_services_filter_by_project(client):
@@ -30,8 +32,9 @@ def test_list_services_filter_by_project(client):
     client.post("/api/services", json={"name": "S1", "project_id": id_a})
     client.post("/api/services", json={"name": "S2", "project_id": id_b})
     res = client.get(f"/api/services?project_id={id_a}")
-    assert len(res.json()) == 1
-    assert res.json()[0]["name"] == "S1"
+    data = res.json()
+    assert data["total"] == 1
+    assert data["items"][0]["name"] == "S1"
 
 
 def test_get_service(client):

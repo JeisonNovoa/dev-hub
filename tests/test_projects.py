@@ -25,7 +25,9 @@ def test_list_projects(client):
     client.post("/api/projects", json={"name": "Proyecto B"})
     res = client.get("/api/projects")
     assert res.status_code == 200
-    assert len(res.json()) == 2
+    data = res.json()
+    assert data["total"] == 2
+    assert len(data["items"]) == 2
 
 
 def test_patch_project_status(client):

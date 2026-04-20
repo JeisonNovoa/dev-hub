@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Service, User
+from app.schemas.pagination import Page
 from app.schemas.service import ServiceCreate, ServiceResponse, ServiceUpdate
 
 router = APIRouter()
@@ -16,16 +17,21 @@ def _get_service_or_404(service_id: int, user_id: int, db: Session) -> Service:
     return service
 
 
-@router.get("", response_model=list[ServiceResponse])
+@router.get("", response_model=Page[ServiceResponse])
 def list_services(
     project_id: int | None = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[Service]:
+) -> Page[ServiceResponse]:
     query = db.query(Service).filter(Service.user_id == current_user.id)
     if project_id is not None:
         query = query.filter(Service.project_id == project_id)
-    return query.order_by(Service.name).all()
+    query = query.order_by(Service.name)
+    total = query.count()
+    items = query.offset(offset).limit(limit).all()
+    return Page(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.post("", response_model=ServiceResponse, status_code=status.HTTP_201_CREATED)

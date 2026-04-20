@@ -1,28 +1,34 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from slugify import slugify
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user, get_project_or_404
 from app.models import Project, User
+from app.schemas.pagination import Page
 from app.schemas.project import ProjectCreate, ProjectDetailResponse, ProjectResponse, ProjectUpdate
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("", response_model=list[ProjectResponse])
+@router.get("", response_model=Page[ProjectResponse])
 def list_projects(
     status: str | None = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[Project]:
+) -> Page[ProjectResponse]:
     query = db.query(Project).filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
     if status:
         query = query.filter(Project.status == status)
-    return query.order_by(Project.name).all()
+    query = query.order_by(Project.name)
+    total = query.count()
+    items = query.offset(offset).limit(limit).all()
+    return Page(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)

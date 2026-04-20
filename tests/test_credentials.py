@@ -16,23 +16,27 @@ def test_list_credentials(client):
     client.post("/api/credentials", json={"label": "B", "category": "work"})
     res = client.get("/api/credentials")
     assert res.status_code == 200
-    assert len(res.json()) == 2
+    data = res.json()
+    assert data["total"] == 2
+    assert len(data["items"]) == 2
 
 
 def test_filter_by_category(client):
     client.post("/api/credentials", json={"label": "Personal", "category": "personal"})
     client.post("/api/credentials", json={"label": "Trabajo", "category": "work"})
     res = client.get("/api/credentials?category=personal")
-    assert len(res.json()) == 1
-    assert res.json()[0]["category"] == "personal"
+    data = res.json()
+    assert data["total"] == 1
+    assert data["items"][0]["category"] == "personal"
 
 
 def test_search_credentials(client):
     client.post("/api/credentials", json={"label": "Cartesia AI", "username": "dev@email.com"})
     client.post("/api/credentials", json={"label": "ElevenLabs", "username": "other@email.com"})
     res = client.get("/api/credentials?search=Cartesia")
-    assert len(res.json()) == 1
-    assert res.json()[0]["label"] == "Cartesia AI"
+    data = res.json()
+    assert data["total"] == 1
+    assert data["items"][0]["label"] == "Cartesia AI"
 
 
 def test_update_credential(client):

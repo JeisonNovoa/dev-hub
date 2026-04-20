@@ -1,12 +1,13 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Credential, User
 from app.schemas.credential import CredentialCreate, CredentialResponse, CredentialUpdate
+from app.schemas.pagination import Page
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -24,14 +25,16 @@ def _get_credential_or_404(cred_id: int, user_id: int, db: Session) -> Credentia
     return cred
 
 
-@router.get("", response_model=list[CredentialResponse])
+@router.get("", response_model=Page[CredentialResponse])
 def list_credentials(
     project_id: int | None = None,
     category: str | None = None,
     search: str | None = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[Credential]:
+) -> Page[CredentialResponse]:
     query = db.query(Credential).filter(
         Credential.user_id == current_user.id, Credential.deleted_at.is_(None)
     )
@@ -44,7 +47,10 @@ def list_credentials(
         query = query.filter(
             Credential.label.ilike(like) | Credential.username.ilike(like)
         )
-    return query.order_by(Credential.label).all()
+    query = query.order_by(Credential.label)
+    total = query.count()
+    items = query.offset(offset).limit(limit).all()
+    return Page(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.post("", response_model=CredentialResponse, status_code=status.HTTP_201_CREATED)

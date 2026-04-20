@@ -13,6 +13,7 @@ from app.auth import (
 from app.database import get_db
 from app.dependencies import get_current_user_optional
 from app.jinja import templates
+from app.limiter import limiter
 from app.models import User
 
 router = APIRouter()
@@ -45,6 +46,7 @@ def login_page(
 
 
 @router.post("/login")
+@limiter.limit("10/minute")
 def login(
     request: Request,
     email: str = Form(...),
@@ -83,6 +85,7 @@ def register_page(
 
 
 @router.post("/register")
+@limiter.limit("5/minute")
 def register(
     request: Request,
     email: str = Form(...),

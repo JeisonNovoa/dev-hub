@@ -323,7 +323,7 @@ def test_service_edit_form(client):
         "name": "Neon DB", "category": "database", "url": "", "notes": ""
     })
     project = client.get(f"/api/projects/{slug}").json()
-    services = client.get("/api/services").json()
+    services = client.get("/api/services").json()["items"]
     service_id = services[0]["id"]
     res = client.get(f"/ui/projects/{slug}/services/{service_id}/edit")
     assert res.status_code == 200
@@ -334,7 +334,7 @@ def test_service_view(client):
     client.post(f"/ui/projects/{slug}/services/new", data={
         "name": "Render", "category": "hosting", "url": "https://render.com", "notes": ""
     })
-    services = client.get("/api/services").json()
+    services = client.get("/api/services").json()["items"]
     service_id = services[0]["id"]
     res = client.get(f"/ui/projects/{slug}/services/{service_id}/view")
     assert res.status_code == 200
@@ -417,7 +417,7 @@ def test_project_credential_edit_form(client):
     client.post(f"/ui/projects/{slug}/credentials/new", data={
         "label": "Neon", "username": "user@mail.com", "login_via": "email"
     })
-    creds = client.get("/api/credentials").json()
+    creds = client.get("/api/credentials").json()["items"]
     cred_id = creds[0]["id"]
     res = client.get(f"/ui/projects/{slug}/credentials/{cred_id}/edit")
     assert res.status_code == 200
@@ -428,7 +428,7 @@ def test_project_credential_save(client):
     client.post(f"/ui/projects/{slug}/credentials/new", data={
         "label": "Neon", "username": "old@mail.com", "login_via": "email"
     })
-    creds = client.get("/api/credentials").json()
+    creds = client.get("/api/credentials").json()["items"]
     cred_id = creds[0]["id"]
     res = client.post(f"/ui/projects/{slug}/credentials/{cred_id}/save", data={
         "label": "Neon DB",
@@ -447,7 +447,7 @@ def test_project_credential_view(client):
     client.post(f"/ui/projects/{slug}/credentials/new", data={
         "label": "Stripe", "username": "admin@mail.com", "login_via": "email"
     })
-    creds = client.get("/api/credentials").json()
+    creds = client.get("/api/credentials").json()["items"]
     cred_id = creds[0]["id"]
     res = client.get(f"/ui/projects/{slug}/credentials/{cred_id}/view")
     assert res.status_code == 200

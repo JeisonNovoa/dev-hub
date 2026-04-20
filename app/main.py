@@ -1,10 +1,14 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
+from app.limiter import limiter
 from app.logging_config import configure_logging
 from app.routers.api import commands, credentials, env_vars, export, links, projects, repos, services
 from app.routers.ui import auth as ui_auth
@@ -14,6 +18,41 @@ from app.routers.ui import dashboard, project_detail, trash as ui_trash
 configure_logging(debug=settings.debug)
 
 logger = logging.getLogger(__name__)
+
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' https://unpkg.com 'unsafe-eval'; "
+    "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "img-src 'self' data:; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self';"
+)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Content-Security-Policy"] = _CSP
+        return response
+
+
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    if request.headers.get("HX-Request"):
+        return HTMLResponse(
+            '<p class="text-red-400 text-sm font-mono px-2">Demasiadas solicitudes. Espera un momento.</p>',
+            status_code=429,
+        )
+    return JSONResponse(
+        {"detail": f"Límite de solicitudes superado: {exc.detail}. Intenta de nuevo en un momento."},
+        status_code=429,
+    )
 
 
 @asynccontextmanager
@@ -31,6 +70,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+app.add_middleware(SecurityHeadersMiddleware)
 
 logger.info("Iniciando %s", settings.app_name)
 
