@@ -1,7 +1,14 @@
+# Secrets and local env
 .env
+.env.local
+.env.*.local
+
+# Database (local SQLite)
 *.db
 *.db-shm
 *.db-wal
+
+# Python
 __pycache__/
 *.pyc
 .venv/
@@ -10,4 +17,23 @@ dist/
 build/
 *.egg-info/
 .pytest_cache/
+.coverage
+htmlcov/
+
+# Node
 node_modules/
+
+# Logs
+*.log
+
+# Agent / IDE local config
+# (.claude/skills/ stays tracked — project skills)
+.claude/worktrees/
+.claude/settings.local.json
+.agents/
+.codex/
+.mcp.json
+
+# OS
+.DS_Store
+Thumbs.db

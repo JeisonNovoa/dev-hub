@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.jinja import templates
-from app.models import Credential, User
+from app.models import Credential, Project, User
 from app.models.credential import TRASH_RETENTION_DAYS
 
 router = APIRouter()
@@ -20,10 +20,18 @@ def credentials_page(
     request: Request,
     q: str = "",
     category: str = "work",
+    project_id: str = "",
+    sort: str = "label",
+    order: str = "asc",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    credentials = _query_credentials(q, category, current_user.id, db)
+    if sort not in _SORT_COLS:
+        sort = "label"
+    if order not in ("asc", "desc"):
+        order = "asc"
+    pid = int(project_id) if project_id.strip().isdigit() else None
+    credentials = _query_credentials(q, category, pid, current_user.id, db, sort, order)
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse(
             "credentials/partials/credential_rows.html",
@@ -34,6 +42,12 @@ def credentials_page(
         .filter(Credential.user_id == current_user.id, Credential.deleted_at.isnot(None))
         .count()
     )
+    projects = (
+        db.query(Project)
+        .filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
+        .order_by(Project.name)
+        .all()
+    )
     return templates.TemplateResponse(
         "credentials/index.html",
         {
@@ -41,7 +55,11 @@ def credentials_page(
             "credentials": credentials,
             "q": q,
             "category_filter": category,
+            "project_filter": project_id,
+            "sort": sort,
+            "order": order,
             "trash_count": trash_count,
+            "projects": projects,
             "current_user": current_user,
         },
     )
@@ -213,14 +231,27 @@ def credential_save(
     )
 
 
-def _query_credentials(q: str, category: str, user_id: int, db: Session) -> list[Credential]:
+_SORT_COLS = {
+    "label": Credential.label,
+    "category": Credential.category,
+    "created_at": Credential.created_at,
+}
+
+
+def _query_credentials(
+    q: str, category: str, project_id: int | None, user_id: int, db: Session, sort: str = "label", order: str = "asc"
+) -> list[Credential]:
     query = db.query(Credential).filter(Credential.user_id == user_id, Credential.deleted_at.is_(None))
     if category:
         query = query.filter(Credential.category == category)
+    if project_id is not None:
+        query = query.filter(Credential.project_id == project_id)
     if q:
         like = f"%{q}%"
         query = query.filter(Credential.label.ilike(like) | Credential.username.ilike(like))
-    return query.order_by(Credential.label).all()
+    col = _SORT_COLS.get(sort, Credential.label)
+    query = query.order_by(col.desc() if order == "desc" else col.asc())
+    return query.all()
 
 
 def _purge_expired(db: Session) -> int:

@@ -61,7 +61,9 @@
   {% if project.tech_stack %}
   <div class="flex flex-wrap gap-1.5 mb-4">
     {% for tech in project.tech_stack %}
-    <span class="text-xs px-2 py-0.5 rounded font-mono bg-surface border border-surface-border text-gray-400">{{ tech }}</span>
+    <a href="/?q={{ tech | urlencode }}"
+       title="Buscar '{{ tech }}' en el dashboard"
+       class="text-xs px-2 py-0.5 rounded font-mono bg-surface border border-surface-border text-gray-400 hover:text-accent hover:border-accent/30 transition-colors">{{ tech }}</a>
     {% endfor %}
   </div>
   {% endif %}

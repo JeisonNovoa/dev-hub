@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 
 _CSP = (
     "default-src 'self'; "
-    "script-src 'self' https://unpkg.com 'unsafe-eval'; "
+    "script-src 'self' https://unpkg.com 'unsafe-inline' 'unsafe-eval'; "
     "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; "
     "font-src 'self' https://fonts.gstatic.com; "
-    "img-src 'self' data:; "
+    "img-src 'self' data: https://t3.gstatic.com https://icons.duckduckgo.com; "
     "connect-src 'self'; "
     "frame-ancestors 'none'; "
     "base-uri 'self'; "

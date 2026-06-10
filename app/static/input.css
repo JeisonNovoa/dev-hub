@@ -4,6 +4,17 @@
 
 @layer base {
   [x-cloak] { display: none !important; }
+
+  /* Neutralizar fondo blanco del autofill del browser en todos los inputs */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 999px rgb(15 17 23) inset !important;
+    box-shadow: 0 0 0 999px rgb(15 17 23) inset !important;
+    -webkit-text-fill-color: rgb(209 213 219) !important;
+    caret-color: rgb(209 213 219);
+  }
 }
 
 @keyframes loading-slide {

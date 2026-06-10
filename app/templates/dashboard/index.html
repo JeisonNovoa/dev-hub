@@ -9,27 +9,21 @@
     <span class="text-gray-500 font-normal text-sm ml-1">{{ projects | length }} resultado{% if projects | length != 1 %}s{% endif %}</span>
   </h1>
   <button onclick="document.getElementById('new-project-modal').classList.remove('hidden')"
-          class="text-sm px-4 py-2 rounded-lg bg-accent text-black hover:bg-accent-dim font-semibold transition-colors">
+          class="text-sm px-4 py-2 rounded-lg bg-accent text-black hover:bg-accent-dim font-semibold transition-all duration-300 hover:shadow-glow hover:-translate-y-0.5">
     + nuevo proyecto
   </button>
 </div>
 
 <!-- Filtros -->
 <div class="flex flex-col sm:flex-row gap-3 mb-6">
-  <!-- Input oculto que mantiene el filtro activo; lo leen el buscador y los tabs -->
-  <input type="hidden" id="sf" name="status" value="{{ status_filter }}">
-
   <input
+    id="search-q"
     type="search"
     name="q"
     value="{{ q }}"
     placeholder="Buscar proyectos, tech stack..."
-    class="flex-1 bg-surface-card border border-surface-border rounded-lg px-4 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-accent/40 transition-colors font-sans"
-    hx-get="/ui/dashboard/cards"
-    hx-trigger="input changed delay:300ms"
-    hx-target="#project-grid"
-    hx-swap="innerHTML"
-    hx-include="#sf"
+    class="flex-1 bg-surface-card/50 backdrop-blur-sm border border-surface-border rounded-lg px-4 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/50 transition-all duration-300 font-sans shadow-sm hover:border-gray-600"
+    oninput="scheduleSearch(this.value)"
   />
 
   <!-- Tabs de status -->
@@ -43,13 +37,9 @@
     {% for val, label, count in tabs %}
     <button
       type="button"
-      hx-get="/ui/dashboard/cards"
-      hx-trigger="click"
-      hx-target="#project-grid"
-      hx-swap="innerHTML"
-      hx-include="#sf,[name='q']"
-      onclick="document.getElementById('sf').value='{{ val }}'; document.querySelectorAll('.status-tab').forEach(b => b.dataset.active='false'); this.dataset.active='true'"
+      data-status="{{ val }}"
       data-active="{{ 'true' if status_filter == val else 'false' }}"
+      onclick="filterProjects(this)"
       class="status-tab flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-mono transition-colors
         data-[active=true]:bg-surface data-[active=true]:text-gray-100 data-[active=true]:border data-[active=true]:border-surface-border
         data-[active=false]:text-gray-500 data-[active=false]:hover:text-gray-300">
@@ -163,4 +153,30 @@
     </form>
   </div>
 </div>
+
+<script>
+  let _activeStatus = '{{ status_filter }}';
+  let _searchTimer = null;
+
+  function filterProjects(btn) {
+    _activeStatus = btn.dataset.status;
+    document.querySelectorAll('.status-tab').forEach(b => b.dataset.active = 'false');
+    btn.dataset.active = 'true';
+    _loadCards();
+  }
+
+  function scheduleSearch(q) {
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(() => _loadCards(), 300);
+  }
+
+  function _loadCards() {
+    const q = document.getElementById('search-q').value;
+    const params = new URLSearchParams({ q, status: _activeStatus });
+    htmx.ajax('GET', '/ui/dashboard/cards?' + params.toString(), {
+      target: '#project-grid',
+      swap: 'innerHTML'
+    });
+  }
+</script>
 {% endblock %}

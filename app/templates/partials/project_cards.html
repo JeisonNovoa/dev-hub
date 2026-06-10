@@ -42,8 +42,10 @@
   </div>
 
   <a href="/projects/{{ project.slug }}"
-     class="block bg-surface-card border border-surface-border rounded-xl p-5 transition-colors duration-200 hover:border-gray-600">
-
+     class="block bg-surface-card backdrop-blur-sm border border-surface-border rounded-xl p-5 transition-all duration-300 hover:border-accent/40 hover:shadow-glow hover:-translate-y-1 relative overflow-hidden">
+     
+    <!-- Gradiente sutil on hover -->
+    <div class="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
     <!-- Nombre -->
     <h3 class="font-mono font-semibold text-gray-100 group-hover:text-accent transition-colors truncate text-sm mb-1.5 pr-28">
       <span class="text-accent opacity-70 mr-1">▸</span>{{ project.name }}

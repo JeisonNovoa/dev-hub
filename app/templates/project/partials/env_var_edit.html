@@ -1,32 +1,47 @@
-<div id="env-var-row-{{ env_var.id }}" class="px-5 py-3 bg-surface-hover">
+<div id="env-var-row-{{ env_var.id }}" class="border-l-2 border-l-accent/40 bg-surface-card mx-1 my-0.5 rounded-r-xl">
   <form hx-put="/api/projects/{{ project.slug }}/env-vars/{{ env_var.id }}"
         hx-target="#env-var-row-{{ env_var.id }}"
         hx-swap="outerHTML"
         hx-ext="json-enc"
-        class="space-y-2">
-    <div class="flex gap-2">
-      <input name="key" value="{{ env_var.key }}"
-             placeholder="VARIABLE_NAME"
-             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-accent focus:outline-none focus:border-accent/60" />
-      <input name="value" value="{{ env_var.value or '' }}"
-             placeholder="valor"
-             class="flex-1 bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-gray-300 focus:outline-none focus:border-accent/60" />
+        class="px-4 py-3 space-y-3">
+
+    <p class="text-xs font-mono text-accent/70 uppercase tracking-widest">— editando variable</p>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Clave *</label>
+        <input name="key" value="{{ env_var.key }}"
+               placeholder="NOMBRE_VARIABLE"
+               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm font-mono text-accent focus:outline-none focus:border-accent/50 transition-colors" />
+      </div>
+      <div>
+        <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Valor</label>
+        <input name="value" value="{{ env_var.value or '' }}"
+               placeholder="valor"
+               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm font-mono text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
+      </div>
     </div>
-    <input name="description" value="{{ env_var.description or '' }}"
-           placeholder="Descripción (opcional)"
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
-    <div class="flex gap-2">
-      <button type="submit"
-              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
-        Guardar
-      </button>
+
+    <div>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Descripción</label>
+      <input name="description" value="{{ env_var.description or '' }}"
+             placeholder="Para qué sirve esta variable..."
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div class="flex gap-2 pt-1">
       <button type="button"
               hx-get="/ui/projects/{{ project.slug }}/env-vars/{{ env_var.id }}/view"
               hx-target="#env-var-row-{{ env_var.id }}"
               hx-swap="outerHTML"
-              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+              class="flex-1 py-2 rounded-lg bg-surface border border-surface-border text-xs font-mono text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors">
         Cancelar
       </button>
+      <button type="submit"
+              class="flex-1 py-2 rounded-lg bg-accent hover:bg-accent-dim text-xs font-mono font-semibold text-black transition-colors">
+        Guardar
+      </button>
     </div>
+
   </form>
 </div>

@@ -1,33 +1,52 @@
-<div id="repo-card-{{ repo.id }}" class="border border-surface-border rounded-xl bg-surface-hover p-4">
+<div id="repo-card-{{ repo.id }}" class="border border-accent/20 border-l-2 border-l-accent/50 bg-surface-card rounded-xl p-4">
   <form hx-put="/api/projects/{{ project.slug }}/repos/{{ repo.slug }}"
         hx-target="#repo-card-{{ repo.id }}"
         hx-swap="outerHTML"
         hx-ext="json-enc"
-        class="space-y-2">
-    <input name="name" value="{{ repo.name }}" required
-           placeholder="Nombre"
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs font-semibold text-gray-200 focus:outline-none focus:border-accent/60" />
-    <input name="local_path" value="{{ repo.local_path or '' }}"
-           placeholder="Ruta local"
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs font-mono text-gray-400 focus:outline-none focus:border-accent/60" />
-    <input name="github_url" value="{{ repo.github_url or '' }}" type="url"
-           placeholder="URL GitHub"
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-accent/60" />
-    <input name="description" value="{{ repo.description or '' }}"
-           placeholder="Descripción"
-           class="w-full bg-surface border border-surface-border rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-accent/60" />
-    <div class="flex gap-2">
-      <button type="submit"
-              class="text-xs px-3 py-1 rounded bg-accent hover:bg-accent-dim text-white transition-colors">
-        Guardar
-      </button>
+        class="space-y-3">
+
+    <p class="text-xs font-mono text-accent/70 uppercase tracking-widest">— editando repositorio</p>
+
+    <div>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Nombre *</label>
+      <input name="name" value="{{ repo.name }}" required
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Ruta local</label>
+      <input name="local_path" value="{{ repo.local_path or '' }}"
+             placeholder="/home/user/projects/mi-repo"
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm font-mono text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">URL GitHub</label>
+      <input name="github_url" value="{{ repo.github_url or '' }}" type="url"
+             placeholder="https://github.com/user/repo"
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Descripción</label>
+      <input name="description" value="{{ repo.description or '' }}"
+             placeholder="Descripción breve"
+             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+
+    <div class="flex gap-2 pt-1">
       <button type="button"
               hx-get="/ui/projects/{{ project.slug }}/repos/{{ repo.id }}/view"
               hx-target="#repo-card-{{ repo.id }}"
               hx-swap="outerHTML"
-              class="text-xs px-3 py-1 rounded bg-surface border border-surface-border text-gray-400 hover:text-gray-100 transition-colors">
+              class="flex-1 py-2 rounded-lg bg-surface border border-surface-border text-xs font-mono text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors">
         Cancelar
       </button>
+      <button type="submit"
+              class="flex-1 py-2 rounded-lg bg-accent hover:bg-accent-dim text-xs font-mono font-semibold text-black transition-colors">
+        Guardar
+      </button>
     </div>
+
   </form>
 </div>

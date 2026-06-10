@@ -1,22 +1,22 @@
-<div id="service-row-{{ service.id }}" class="px-5 py-4 border-b border-surface-border bg-surface-hover">
+<div id="service-row-{{ service.id }}" class="border-l-2 border-l-accent/40 bg-surface-card mx-1 my-1 rounded-r-xl">
   <form hx-put="/api/services/{{ service.id }}"
         hx-target="#service-row-{{ service.id }}"
         hx-swap="outerHTML"
         hx-ext="json-enc"
-        class="space-y-3">
+        class="px-4 py-4 space-y-3">
 
-    <p class="text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">editar servicio</p>
+    <p class="text-xs font-mono text-accent/70 uppercase tracking-widest">— editando servicio</p>
 
-    <div class="flex gap-2">
-      <div class="flex-1">
-        <label class="block text-xs text-gray-600 font-mono mb-1">Nombre</label>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Nombre *</label>
         <input name="name" value="{{ service.name }}" required
-               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent/50 transition-colors" />
+               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-accent/50 transition-colors" />
       </div>
       <div>
-        <label class="block text-xs text-gray-600 font-mono mb-1">Tipo</label>
+        <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Tipo</label>
         <select name="category"
-                class="bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-accent/50 transition-colors">
+                class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors">
           {% for cat in ['ai','auth','storage','db','deploy','messaging','monitoring','other'] %}
           <option value="{{ cat }}" {% if service.category == cat %}selected{% endif %}>{{ cat }}</option>
           {% endfor %}
@@ -25,14 +25,14 @@
     </div>
 
     <div>
-      <label class="block text-xs text-gray-600 font-mono mb-1">URL <span class="text-gray-700">(opcional)</span></label>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">URL</label>
       <input name="url" value="{{ service.url or '' }}" type="url"
-             placeholder="https://dashboard.openai.com"
+             placeholder="https://dashboard.example.com"
              class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
     </div>
 
     <div>
-      <label class="block text-xs text-gray-600 font-mono mb-1">Notas <span class="text-gray-700">(opcional)</span></label>
+      <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Notas</label>
       <input name="notes" value="{{ service.notes or '' }}"
              placeholder="Plan, cuenta, límites..."
              class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
@@ -43,11 +43,11 @@
               hx-get="/ui/projects/{{ project.slug }}/services/{{ service.id }}/view"
               hx-target="#service-row-{{ service.id }}"
               hx-swap="outerHTML"
-              class="flex-1 text-sm font-mono px-3 py-2 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors">
+              class="flex-1 py-2 rounded-lg bg-surface border border-surface-border text-xs font-mono text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors">
         Cancelar
       </button>
       <button type="submit"
-              class="flex-1 text-sm font-mono font-semibold px-3 py-2 rounded-lg bg-accent hover:bg-accent-dim text-black transition-colors">
+              class="flex-1 py-2 rounded-lg bg-accent hover:bg-accent-dim text-xs font-mono font-semibold text-black transition-colors">
         Guardar
       </button>
     </div>

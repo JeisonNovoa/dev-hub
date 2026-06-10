@@ -26,9 +26,9 @@ def decrypt(value: str | None) -> str | None:
     try:
         return _fernet().decrypt(value.encode()).decode()
     except (InvalidToken, Exception):
-        # Valor en texto plano (datos previos al cifrado) — se devuelve tal cual.
-        # Al próximo guardado quedará cifrado.
-        logger.warning("Valor de credencial no cifrado encontrado — migración pendiente")
+        # Cifrado con clave diferente o dato en texto plano — se devuelve tal cual.
+        # Al próximo guardado quedará cifrado con la clave actual.
+        logger.debug("Credencial no descifrable con clave actual — se devuelve valor original")
         return value
 
 

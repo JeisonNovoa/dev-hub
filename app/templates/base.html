@@ -7,30 +7,37 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css?v=1776621132" />
 
   <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
+  <script src="https://unpkg.com/marked@15/marked.min.js" defer></script>
   <script src="https://unpkg.com/@alpinejs/collapse@3.14.3/dist/cdn.min.js" defer></script>
   <script src="https://unpkg.com/alpinejs@3.14.3/dist/cdn.min.js" defer></script>
   <script src="/static/app.js" defer></script>
 </head>
 
-<body class="bg-surface text-gray-100 min-h-screen antialiased font-sans"
+<body class="bg-surface text-gray-100 min-h-screen antialiased font-sans relative overflow-x-hidden"
       x-data="{ flash: null }"
       @show-flash.window="flash = $event.detail; setTimeout(() => flash = null, 3000)">
+
+  <!-- Fondo dinámico con gradientes -->
+  <div class="fixed inset-0 pointer-events-none z-[-1]">
+    <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-accent/10 rounded-full blur-[120px] mix-blend-screen animate-pulse-slow"></div>
+    <div class="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-500/10 rounded-full blur-[120px] mix-blend-screen animate-pulse-slow" style="animation-delay: 2s;"></div>
+  </div>
 
 <!-- Barra de progreso HTMX -->
 <div id="htmx-loader" class="htmx-loader" hidden></div>
 
   {% if current_user %}
   <!-- Sidebar -->
-  <aside class="fixed top-0 left-0 h-screen w-56 bg-surface-card border-r border-surface-border flex flex-col z-40">
+  <aside class="fixed top-0 left-0 h-screen w-56 bg-surface-card/70 backdrop-blur-md border-r border-surface-border flex flex-col z-40 transition-all duration-300">
     <!-- Logo -->
-    <div class="px-5 py-5 border-b border-surface-border">
-      <a href="/" class="flex items-center gap-2 font-mono font-bold text-accent tracking-tight text-sm">
-        <span class="text-accent opacity-80 font-mono text-base leading-none">▸</span>
+    <div class="px-5 py-5 border-b border-surface-border/50 bg-gradient-to-b from-surface-card/40 to-transparent">
+      <a href="/" class="flex items-center gap-2 font-mono font-bold text-accent tracking-tight text-sm hover:opacity-80 transition-opacity">
+        <span class="text-accent opacity-80 font-mono text-base leading-none animate-pulse">▸</span>
         dev-hub
       </a>
     </div>

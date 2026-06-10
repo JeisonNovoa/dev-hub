@@ -23,9 +23,21 @@ def project_detail(
     for cmd in project.commands:
         if cmd.repo_id is None:
             commands_by_type.setdefault(cmd.type, []).append(cmd)
+    global_services = (
+        db.query(Service)
+        .filter(Service.user_id == current_user.id, Service.project_id.is_(None))
+        .order_by(Service.category, Service.name)
+        .all()
+    )
     return templates.TemplateResponse(
         "project/detail.html",
-        {"request": request, "project": project, "commands_by_type": commands_by_type, "current_user": current_user},
+        {
+            "request": request,
+            "project": project,
+            "commands_by_type": commands_by_type,
+            "global_services": global_services,
+            "current_user": current_user,
+        },
     )
 
 
