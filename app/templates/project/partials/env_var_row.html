@@ -1,14 +1,14 @@
 <div id="env-var-row-{{ env_var.id }}" class="px-5 py-3 flex items-start gap-3 group"
      x-data="{ confirming: false }" @mouseleave="confirming = false">
   <div class="flex-1 min-w-0">
-    <div class="flex items-center gap-2 mb-1">
-      <span class="font-mono text-xs text-accent">{{ env_var.key }}</span>
+    <div class="flex items-center gap-2 mb-1 min-w-0">
+      <span class="font-mono text-xs text-accent truncate" title="{{ env_var.key }}">{{ env_var.key }}</span>
       {% if env_var.description %}
-      <span class="text-xs text-gray-600">— {{ env_var.description }}</span>
+      <span class="text-xs text-gray-600 truncate">— {{ env_var.description }}</span>
       {% endif %}
     </div>
-    <div class="flex items-center gap-2" x-data="{ shown: false, copied: false }">
-      <span class="font-mono text-xs text-gray-400" x-text="shown ? '{{ env_var.value or '' }}' : '•••••••••••••'"></span>
+    <div class="flex items-center gap-2 min-w-0" x-data="{ shown: false, copied: false }" data-value="{{ env_var.value or '' }}">
+      <span class="font-mono text-xs text-gray-400 truncate" x-text="shown ? $root.dataset.value : '•••••••••••••'"></span>
       {% if env_var.value %}
       <!-- Toggle show/hide -->
       <button @click="shown = !shown"
@@ -23,7 +23,7 @@
         </svg>
       </button>
       <!-- Copy button -->
-      <button @click="navigator.clipboard.writeText('{{ env_var.value }}'); copied = true; setTimeout(() => copied = false, 2000)"
+      <button @click="navigator.clipboard.writeText($root.dataset.value); copied = true; setTimeout(() => copied = false, 2000)"
               class="opacity-0 group-hover:opacity-100 transition-all shrink-0"
               :class="copied ? 'text-accent scale-110' : 'text-gray-600 hover:text-accent'"
               title="Copiar valor">

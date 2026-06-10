@@ -46,9 +46,9 @@
       <div class="space-y-2">
         {% for p in results.projects %}
         <a href="/projects/{{ p.slug }}"
-           class="flex items-center justify-between bg-surface-card border-l-2 border border-surface-border border-l-accent/40 rounded-lg px-4 py-3 hover:border-l-accent hover:bg-surface-hover transition-all duration-150 group">
-          <span class="text-gray-100 text-sm font-mono group-hover:text-accent transition-colors">{{ p.name }}</span>
-          <span class="text-xs text-gray-600 font-mono">{{ p.tech_stack | join(', ') }}</span>
+           class="flex items-center justify-between gap-3 bg-surface-card border-l-2 border border-surface-border border-l-accent/40 rounded-lg px-4 py-3 hover:border-l-accent hover:bg-surface-hover transition-all duration-150 group">
+          <span class="text-gray-100 text-sm font-mono group-hover:text-accent transition-colors truncate">{{ p.name }}</span>
+          <span class="text-xs text-gray-600 font-mono truncate max-w-[40%] text-right">{{ p.tech_stack | join(', ') }}</span>
         </a>
         {% endfor %}
       </div>
@@ -64,9 +64,9 @@
       <div class="space-y-2">
         {% for c in results.credentials %}
         <a href="/credentials"
-           class="flex items-center justify-between bg-surface-card border border-surface-border rounded-lg px-4 py-3 hover:border-accent/30 hover:bg-surface-hover transition-all duration-150">
-          <span class="text-gray-100 text-sm">{{ c.label }}</span>
-          <span class="text-xs text-gray-600 font-mono">{{ c.username or '' }}</span>
+           class="flex items-center justify-between gap-3 bg-surface-card border border-surface-border rounded-lg px-4 py-3 hover:border-accent/30 hover:bg-surface-hover transition-all duration-150">
+          <span class="text-gray-100 text-sm truncate">{{ c.label }}</span>
+          <span class="text-xs text-gray-600 font-mono truncate max-w-[40%] text-right">{{ c.username or '' }}</span>
         </a>
         {% endfor %}
       </div>
@@ -81,8 +81,8 @@
       </h2>
       <div class="space-y-2">
         {% for s in results.services %}
-        <div class="flex items-center justify-between bg-surface-card border border-surface-border rounded-lg px-4 py-3 hover:bg-surface-hover transition-colors">
-          <span class="text-gray-100 text-sm">{{ s.name }}</span>
+        <div class="flex items-center justify-between gap-3 bg-surface-card border border-surface-border rounded-lg px-4 py-3 hover:bg-surface-hover transition-colors">
+          <span class="text-gray-100 text-sm truncate">{{ s.name }}</span>
           {% if s.url %}
           <a href="{{ s.url }}" target="_blank" rel="noopener"
              class="text-accent text-xs hover:underline font-mono" @click.stop>
@@ -104,9 +104,9 @@
       <div class="space-y-2">
         {% for l in results.links %}
         <a href="{{ l.url }}" target="_blank" rel="noopener"
-           class="flex items-center justify-between bg-surface-card border border-surface-border rounded-lg px-4 py-3 hover:border-accent/30 hover:bg-surface-hover transition-all duration-150">
-          <span class="text-gray-100 text-sm">{{ l.label }}</span>
-          <span class="text-xs text-accent font-mono">{{ l.url | truncate(40) }}</span>
+           class="flex items-center justify-between gap-3 bg-surface-card border border-surface-border rounded-lg px-4 py-3 hover:border-accent/30 hover:bg-surface-hover transition-all duration-150">
+          <span class="text-gray-100 text-sm truncate">{{ l.label }}</span>
+          <span class="text-xs text-accent font-mono truncate max-w-[40%] text-right">{{ l.url | truncate(40) }}</span>
         </a>
         {% endfor %}
       </div>

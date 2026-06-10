@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def credentials_page(
     request: Request,
     q: str = "",
-    category: str = "work",
+    category: str = "",
     project_id: str = "",
     sort: str = "label",
     order: str = "asc",

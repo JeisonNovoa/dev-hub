@@ -70,7 +70,7 @@
     {% if project.tech_stack %}
     <div class="flex flex-wrap gap-1.5 mb-3">
       {% for tech in project.tech_stack %}
-      <span class="text-xs px-2 py-0.5 rounded font-mono bg-surface border border-surface-border text-gray-500 group-hover:border-accent/20 transition-colors">
+      <span class="text-xs px-2 py-0.5 rounded font-mono bg-surface border border-surface-border text-gray-500 group-hover:border-accent/20 transition-colors truncate max-w-full">
         {{ tech }}
       </span>
       {% endfor %}

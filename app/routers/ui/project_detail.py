@@ -23,6 +23,7 @@ def project_detail(
     for cmd in project.commands:
         if cmd.repo_id is None:
             commands_by_type.setdefault(cmd.type, []).append(cmd)
+    project_env_vars = [ev for ev in project.env_vars if ev.repo_id is None]
     global_services = (
         db.query(Service)
         .filter(Service.user_id == current_user.id, Service.project_id.is_(None))
@@ -35,6 +36,7 @@ def project_detail(
             "request": request,
             "project": project,
             "commands_by_type": commands_by_type,
+            "project_env_vars": project_env_vars,
             "global_services": global_services,
             "current_user": current_user,
         },

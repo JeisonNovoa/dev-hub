@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev-hub",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": [
+        "-Command",
+        ".venv\\Scripts\\python -m uvicorn app.main:app --reload --port 8000"
+      ],
+      "port": 8000
+    }
+  ]
+}

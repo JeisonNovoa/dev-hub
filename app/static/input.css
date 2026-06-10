@@ -51,6 +51,8 @@
 @layer components {
   .notes-content {
     @apply text-sm text-gray-300 leading-relaxed;
+    /* Tokens largos sin espacios (URLs, claves) se parten en vez de desbordar */
+    overflow-wrap: anywhere;
   }
 
   .notes-content h1,
@@ -139,6 +141,9 @@
 
   .notes-content table {
     @apply w-full text-sm border-collapse my-1;
+    /* Tablas anchas escrollean dentro de su bloque en vez de romper el layout */
+    display: block;
+    overflow-x: auto;
   }
 
   .notes-content thead tr {

@@ -1,6 +1,10 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
+
+LoginVia = Literal["email", "google", "github", "microsoft", "other"]
+Category = Literal["personal", "work", "project"]
 
 
 def _validate_http_url(v: str | None) -> str | None:
@@ -17,8 +21,8 @@ class CredentialBase(BaseModel):
     username: str | None = None
     password: str | None = None
     url: str | None = None
-    category: str = "project"
-    login_via: str = "email"
+    category: Category = "project"
+    login_via: LoginVia = "email"
     notes: str | None = None
     service_id: int | None = None
     project_id: int | None = None
@@ -38,8 +42,8 @@ class CredentialUpdate(BaseModel):
     username: str | None = None
     password: str | None = None
     url: str | None = None
-    category: str | None = None
-    login_via: str = "email"
+    category: Category | None = None
+    login_via: LoginVia | None = None
     notes: str | None = None
     service_id: int | None = None
     project_id: int | None = None
@@ -52,6 +56,9 @@ class CredentialUpdate(BaseModel):
 
 class CredentialResponse(CredentialBase):
     id: int
+    # Lenientes en salida: datos legacy pueden tener valores fuera del enum.
+    category: str = "project"
+    login_via: str = "email"
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

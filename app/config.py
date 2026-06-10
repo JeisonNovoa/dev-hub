@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     app_name: str = "Dev Hub"
     debug: bool = False
     encryption_key: str  # obligatoria — genera una con: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # Claves anteriores separadas por coma. Solo se usan para DESCIFRAR datos viejos
+    # (p. ej. tras rotar ENCRYPTION_KEY); todo lo nuevo se cifra con encryption_key.
+    old_encryption_keys: str = ""
     secret_key: str  # obligatoria — genera una con: python -c "import secrets; print(secrets.token_hex(32))"
 
     @field_validator("encryption_key")
@@ -21,6 +24,23 @@ class Settings(BaseSettings):
                 "python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
             )
         return v
+
+    @field_validator("old_encryption_keys")
+    @classmethod
+    def validate_old_encryption_keys(cls, v: str) -> str:
+        for key in v.split(","):
+            key = key.strip()
+            if not key:
+                continue
+            try:
+                Fernet(key.encode())
+            except Exception:
+                raise ValueError(f"OLD_ENCRYPTION_KEYS contiene una clave Fernet inválida: {key[:8]}…")
+        return v
+
+    @property
+    def old_encryption_keys_list(self) -> list[str]:
+        return [k.strip() for k in self.old_encryption_keys.split(",") if k.strip()]
 
     @field_validator("secret_key")
     @classmethod

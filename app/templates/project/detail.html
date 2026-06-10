@@ -5,15 +5,15 @@
 {% block content %}
 
 <!-- Breadcrumb -->
-<div class="flex items-center gap-2 text-sm font-mono mb-6 border-b border-surface-border pb-4 -mt-2">
-  <a href="/" class="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-colors">
+<div class="flex items-center gap-2 text-sm font-mono mb-6 border-b border-surface-border pb-4 -mt-2 min-w-0">
+  <a href="/" class="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-colors shrink-0">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
     proyectos/
   </a>
-  <span class="text-gray-600">/</span>
-  <span class="text-accent">{{ project.name }}</span>
+  <span class="text-gray-600 shrink-0">/</span>
+  <span class="text-accent truncate" title="{{ project.name }}">{{ project.name }}</span>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -23,6 +23,84 @@
 
     <!-- Header card del proyecto -->
     {% include "project/partials/project_header.html" %}
+
+    <!-- Comandos del proyecto -->
+    {% set total_proj_cmds = commands_by_type.values() | map('length') | sum %}
+    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
+        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
+          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          comandos
+          {% if total_proj_cmds %}
+          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-surface-border text-gray-600 font-mono">{{ total_proj_cmds }}</span>
+          {% endif %}
+        </h2>
+      </div>
+      {% for type_name, type_label in [('start','inicio'), ('migration','migración'), ('build','build'), ('other','otros')] %}
+      {% set cmds = commands_by_type.get(type_name, []) %}
+      {% if cmds or type_name == 'start' %}
+      <div class="border-b border-surface-border last:border-b-0">
+        <div class="flex items-center justify-between px-5 py-2">
+          <span class="text-xs font-mono text-gray-600 uppercase tracking-widest">{{ type_label }}</span>
+          <button
+            hx-get="/ui/projects/{{ project.slug }}/commands/new?type={{ type_name }}"
+            hx-target="#cmd-list-{{ type_name }}"
+            hx-swap="beforeend"
+            class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
+            + agregar
+          </button>
+        </div>
+        <div id="cmd-list-{{ type_name }}" class="divide-y divide-surface-border">
+          {% for cmd in cmds %}
+          {% include "project/partials/command_row.html" %}
+          {% endfor %}
+          {% if not cmds %}
+          <p class="px-5 py-3 text-xs text-gray-700 font-mono">sin comandos de {{ type_label }} aún.</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </section>
+
+    <!-- Variables de entorno del proyecto -->
+    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
+        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
+          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
+          variables de entorno
+          {% if project_env_vars %}
+          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-surface-border text-gray-600 font-mono">{{ project_env_vars | length }}</span>
+          {% endif %}
+        </h2>
+        <button
+          hx-get="/ui/projects/{{ project.slug }}/env-vars/new"
+          hx-target="#env-vars-list"
+          hx-swap="afterbegin"
+          class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
+          + agregar
+        </button>
+      </div>
+      <div id="env-vars-list" class="divide-y divide-surface-border">
+        {% for env_var in project_env_vars %}
+        {% include "project/partials/env_var_row.html" %}
+        {% endfor %}
+        {% if not project_env_vars %}
+        <div class="px-5 py-4 flex items-center gap-2 text-xs text-gray-700">
+          <svg class="w-3.5 h-3.5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
+          <span class="font-mono">sin variables de entorno aún.</span>
+        </div>
+        {% endif %}
+      </div>
+    </section>
 
     <!-- Repositorios -->
     <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">

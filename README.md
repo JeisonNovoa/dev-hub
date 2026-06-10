@@ -102,10 +102,32 @@ DEBUG=true
 # Genera con: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ENCRYPTION_KEY=
 
+# Claves de cifrado anteriores, separadas por coma (opcional)
+# Solo descifran datos viejos tras rotar ENCRYPTION_KEY
+OLD_ENCRYPTION_KEYS=
+
 # Clave para firmar sesiones (obligatoria, mínimo 32 chars)
 # Genera con: python -c "import secrets; print(secrets.token_hex(32))"
 SECRET_KEY=
 ```
+
+## Si las contraseñas se ven como `gAAAAA...`
+
+Ese texto es el token cifrado: significa que la `ENCRYPTION_KEY` configurada no es la misma con la que se cifraron los datos (rotaste la clave, o la migración los dobló-cifró). Para arreglarlo:
+
+1. **Solución inmediata (sin tocar datos):** agrega la clave original en `OLD_ENCRYPTION_KEYS` (en Render → Environment). La app descifrará con ella como fallback. La clave original suele ser la `ENCRYPTION_KEY` de tu `.env` local si migraste los datos desde local.
+
+2. **Solución permanente:** re-cifra todo con la clave actual apuntando a la BD de producción:
+
+```powershell
+$env:DATABASE_URL        = "postgresql+psycopg2://...supabase..."
+$env:ENCRYPTION_KEY      = "<clave ACTUAL de Render>"
+$env:OLD_ENCRYPTION_KEYS = "<clave original>"
+.venv\Scripts\python scripts/reencrypt_credentials.py --dry-run   # previsualizar
+.venv\Scripts\python scripts/reencrypt_credentials.py             # aplicar
+```
+
+El script reporta cuáles credenciales quedaron irrecuperables (si ninguna clave las descifra) para que puedas re-ingresarlas a mano.
 
 ## Correr tests
 
