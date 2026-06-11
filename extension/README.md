@@ -1,0 +1,60 @@
+# Dev Hub — Extensión de navegador (Autofill)
+
+Autocompleta credenciales guardadas en tu Dev Hub y ofrece guardar logins nuevos.
+Funciona en Chrome, Edge y Brave. **Costo: $0** (se usa en modo desarrollador).
+
+## Cómo instalarla (una sola vez, ~2 minutos)
+
+1. Abre Chrome y entra a `chrome://extensions` (en Edge: `edge://extensions`).
+2. Activa el interruptor **"Modo de desarrollador"** (esquina superior derecha).
+3. Clic en **"Cargar descomprimida"** (Load unpacked).
+4. Selecciona esta carpeta: `dev-hub/extension`.
+5. Aparece "Dev Hub — Autofill" en la lista. Opcional: fija el ícono desde el
+   menú de extensiones (puzzle) para tenerlo a mano.
+
+> Si tu Dev Hub NO está en `*.onrender.com` ni en `localhost:8000`, agrega tu
+> dominio en `host_permissions` dentro de `manifest.json` y recarga la extensión.
+
+## Cómo conectarla (una sola vez)
+
+1. Clic en el ícono de la extensión.
+2. Pon la **URL de tu Dev Hub** (ej. `https://tu-app.onrender.com`), tu **email**
+   y tu **contraseña** de Dev Hub.
+3. Crea tu **PIN de desbloqueo** (numérico, mínimo 4 dígitos — ej. `2026`).
+4. "Conectar". Listo: el dispositivo aparece en Dev Hub → **Extensión**, desde
+   donde puedes revocar el acceso cuando quieras.
+
+## Cómo se usa
+
+- **Autocompletar**: en cualquier página de login aparece un ícono `▸` dentro del
+  campo de contraseña. Haz clic → si está bloqueado te pide el PIN → muestra tus
+  cuentas guardadas para ese dominio (si hay varias, eliges cuál) → rellena.
+- **Desbloqueo temporal**: tras poner el PIN queda desbloqueado **5 minutos**
+  (cada uso renueva el tiempo). Después vuelve a pedir el PIN.
+- **Guardar un login nuevo**: inicia sesión normal en un sitio. En la página
+  siguiente aparece un aviso "¿Guardar … en Dev Hub?" → **Guardar** (te pedirá el
+  PIN si está bloqueado). La credencial queda en tu bóveda con el dominio.
+- **Bloquear/cerrar sesión**: desde el popup de la extensión.
+
+## Seguridad (cómo está diseñada)
+
+- Tu **PIN nunca sale del navegador**: solo se usa para cifrar localmente
+  (PBKDF2 + AES-GCM) el token de acceso. Sin PIN, lo guardado es ilegible.
+- **5 intentos fallidos de PIN → se borra todo** y hay que reconectar.
+- El token y las contraseñas **nunca se exponen a las páginas web**: viven en el
+  service worker; el relleno ocurre solo tras tu clic.
+- **Match de dominio exacto** (anti-phishing): la credencial de `cartesia.ai`
+  solo se ofrece en `cartesia.ai` o sus subdominios — jamás en dominios parecidos.
+- El acceso es **revocable** desde Dev Hub → Extensión (cada login de la extensión
+  crea un token independiente, hasheado en la base de datos).
+
+## Archivos
+
+| Archivo | Qué hace |
+|---|---|
+| `manifest.json` | Identidad y permisos de la extensión (Manifest V3) |
+| `background.js` | Service worker: guarda el token cifrado, habla con la API |
+| `crypto.js` | Cifrado del token con el PIN (PBKDF2 + AES-GCM) |
+| `content.js` | Se inyecta en las páginas: ícono, autofill, banner de guardado |
+| `content.css` | Estilos del UI inyectado |
+| `popup.*` | La ventanita de la extensión: conectar, PIN, bloquear |

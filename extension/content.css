@@ -1,0 +1,170 @@
+/* Estilos del UI inyectado por Dev Hub. Prefijo devhub-ext- y !important en lo
+   crítico para resistir el CSS de cualquier página. */
+
+.devhub-ext-icon {
+  position: absolute !important;
+  z-index: 2147483646 !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #161922 !important;
+  color: #22c55e !important;
+  border: 1px solid #2a2d3e !important;
+  border-radius: 5px !important;
+  font: 700 11px/1 Consolas, monospace !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4) !important;
+}
+
+.devhub-ext-icon:hover {
+  border-color: #22c55e !important;
+}
+
+.devhub-ext-panel {
+  position: absolute !important;
+  z-index: 2147483647 !important;
+  width: 260px !important;
+  background: #0f1117 !important;
+  border: 1px solid #2a2d3e !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
+  padding: 10px !important;
+  font-family: 'Segoe UI', system-ui, sans-serif !important;
+  font-size: 13px !important;
+  color: #e5e7eb !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.devhub-ext-msg {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 11px !important;
+  font-family: Consolas, monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: #6b7280 !important;
+}
+
+.devhub-ext-error {
+  margin: 0 !important;
+  font-size: 12px !important;
+  color: #f87171 !important;
+}
+
+.devhub-ext-pin {
+  width: 100% !important;
+  background: #161922 !important;
+  border: 1px solid #2a2d3e !important;
+  border-radius: 7px !important;
+  padding: 7px 9px !important;
+  color: #e5e7eb !important;
+  font-size: 14px !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+}
+
+.devhub-ext-pin:focus {
+  border-color: rgba(34, 197, 94, 0.5) !important;
+}
+
+.devhub-ext-btn {
+  background: #22c55e !important;
+  color: #06130a !important;
+  border: none !important;
+  border-radius: 7px !important;
+  padding: 7px 12px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+}
+
+.devhub-ext-btn:hover {
+  background: #16a34a !important;
+}
+
+.devhub-ext-btn-ghost {
+  background: transparent !important;
+  color: #9ca3af !important;
+  border: 1px solid #2a2d3e !important;
+}
+
+.devhub-ext-account {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 2px !important;
+  width: 100% !important;
+  background: #161922 !important;
+  border: 1px solid #2a2d3e !important;
+  border-radius: 8px !important;
+  padding: 8px 10px !important;
+  cursor: pointer !important;
+  text-align: left !important;
+}
+
+.devhub-ext-account:hover {
+  border-color: rgba(34, 197, 94, 0.45) !important;
+}
+
+.devhub-ext-account-label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #e5e7eb !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.devhub-ext-account-user {
+  font-family: Consolas, monospace !important;
+  font-size: 11px !important;
+  color: #6b7280 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.devhub-ext-banner {
+  position: fixed !important;
+  top: 12px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  max-width: min(560px, calc(100vw - 24px)) !important;
+  background: #0f1117 !important;
+  border: 1px solid rgba(34, 197, 94, 0.35) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
+  padding: 10px 14px !important;
+  font-family: 'Segoe UI', system-ui, sans-serif !important;
+  font-size: 13px !important;
+  color: #e5e7eb !important;
+}
+
+.devhub-ext-banner-text {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.devhub-ext-banner-actions {
+  display: flex !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+.devhub-ext-banner-pin {
+  width: 90px !important;
+  flex-shrink: 0 !important;
+}
