@@ -9,7 +9,7 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.auth import generate_extension_token, hash_extension_token, verify_password
@@ -31,13 +31,22 @@ class ExtensionLogin(BaseModel):
     name: str = Field(default="Extensión", max_length=100)
 
 
+_VALID_LOGIN_VIA = {"email", "google", "github", "microsoft", "other"}
+
+
 class ExtensionCredentialCreate(BaseModel):
     label: str = Field(min_length=1, max_length=255)
     username: str | None = None
     password: str | None = None
     url: str
     category: str = "personal"
+    login_via: str = "email"
     notes: str | None = None
+
+    @field_validator("login_via", mode="before")
+    @classmethod
+    def normalize_login_via(cls, v: object) -> str:
+        return v if v in _VALID_LOGIN_VIA else "email"
 
 
 class ExtensionCredentialUpdate(BaseModel):
@@ -46,7 +55,15 @@ class ExtensionCredentialUpdate(BaseModel):
     password: str | None = None
     url: str | None = None
     category: str | None = None
+    login_via: str | None = None
     notes: str | None = None
+
+    @field_validator("login_via", mode="before")
+    @classmethod
+    def normalize_login_via(cls, v: object) -> str | None:
+        if v is None:
+            return None
+        return v if v in _VALID_LOGIN_VIA else "email"
 
 
 # --- Auth de la extensión ---
@@ -195,7 +212,7 @@ def create_credential_from_extension(
         password=data.password or None,
         url=url,
         category=data.category or "personal",
-        login_via="email",
+        login_via=data.login_via,
         notes=data.notes or None,
     )
     db.add(cred)

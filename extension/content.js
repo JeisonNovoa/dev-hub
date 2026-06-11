@@ -167,6 +167,8 @@
     title.textContent = items.length === 1 ? 'Cuenta guardada' : 'Elige una cuenta';
     p.appendChild(title);
 
+    const PROVIDER_NAMES = { google: 'Google', github: 'GitHub', microsoft: 'Microsoft', other: 'otro método' };
+
     for (const item of items) {
       const row = document.createElement('button');
       row.type = 'button';
@@ -175,6 +177,14 @@
       const label = document.createElement('span');
       label.className = `${PREFIX}-account-label`;
       label.textContent = item.label;
+
+      const isOauth = item.login_via && item.login_via !== 'email';
+      if (isOauth) {
+        const badge = document.createElement('span');
+        badge.className = `${PREFIX}-badge`;
+        badge.textContent = PROVIDER_NAMES[item.login_via] || item.login_via;
+        label.appendChild(badge);
+      }
 
       const user = document.createElement('span');
       user.className = `${PREFIX}-account-user`;
@@ -188,7 +198,17 @@
           return;
         }
         fillCredentials(passwordInput, res.username, res.password);
-        closePanel();
+        if (isOauth) {
+          // No hay contraseña que rellenar: recordar el método y la cuenta.
+          renderMessage(
+            p,
+            `Recuerda: aquí inicias con ${PROVIDER_NAMES[item.login_via] || item.login_via}` +
+              (item.username ? ` usando ${item.username}` : ''),
+          );
+          setTimeout(closePanel, 4000);
+        } else {
+          closePanel();
+        }
       });
       p.appendChild(row);
     }
@@ -281,11 +301,74 @@
     if (pwd && pwd.value) captureSubmit(pwd);
   }, true);
 
+  // Detección de login OAuth: clic en botones tipo "Continuar con Google".
+  const OAUTH_PROVIDER_RE = /\b(google|github|microsoft)\b/i;
+
+  document.addEventListener('click', (e) => {
+    const el = e.target?.closest?.('button, a, [role="button"]');
+    if (!el) return;
+    const text = `${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.title || ''}`.trim();
+    // Texto corto = botón de acción; descarta párrafos que solo mencionan al proveedor.
+    if (!text || text.length > 60) return;
+    const match = text.match(OAUTH_PROVIDER_RE);
+    if (!match) return;
+    send({ type: 'OAUTH_DETECTED', domain: pageDomain(), provider: match[1].toLowerCase() });
+  }, true);
+
   // ─── Banner "¿Guardar en Dev Hub?" ─────────────────────────────────────────
+
+  const PROVIDER_LABELS = { google: 'Google', github: 'GitHub', microsoft: 'Microsoft' };
+
+  function buildBanner(textContent) {
+    const banner = document.createElement('div');
+    banner.className = `${PREFIX}-banner`;
+    const text = document.createElement('span');
+    text.className = `${PREFIX}-banner-text`;
+    text.textContent = textContent;
+    const actions = document.createElement('span');
+    actions.className = `${PREFIX}-banner-actions`;
+    banner.append(text, actions);
+    return { banner, text, actions };
+  }
+
+  async function maybeShowOauthBanner() {
+    const res = await send({ type: 'GET_PENDING_OAUTH' });
+    if (!res?.pending) return;
+    const provider = PROVIDER_LABELS[res.pending.provider] || res.pending.provider;
+
+    const { banner, text, actions } = buildBanner(
+      `Parece que inicias con ${provider} en ${res.pending.domain}. ¿Guardar el acceso en Dev Hub?`,
+    );
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = `${PREFIX}-btn`;
+    addBtn.textContent = 'Añadir correo y guardar';
+    addBtn.addEventListener('click', async () => {
+      const r = await send({ type: 'DRAFT_FROM_OAUTH' });
+      if (r.ok) {
+        text.textContent = 'Abre la extensión de Dev Hub (arriba a la derecha) para completar el correo y guardar.';
+        actions.remove();
+        setTimeout(() => banner.remove(), 6000);
+      }
+    });
+
+    const noBtn = document.createElement('button');
+    noBtn.type = 'button';
+    noBtn.className = `${PREFIX}-btn ${PREFIX}-btn-ghost`;
+    noBtn.textContent = 'No';
+    noBtn.addEventListener('click', async () => {
+      await send({ type: 'DISMISS_OAUTH' });
+      banner.remove();
+    });
+
+    actions.append(addBtn, noBtn);
+    document.body.appendChild(banner);
+  }
 
   async function maybeShowSaveBanner() {
     const res = await send({ type: 'GET_PENDING_SAVE' });
-    if (!res?.pending) return;
+    if (!res?.pending) { maybeShowOauthBanner(); return; }
 
     const banner = document.createElement('div');
     banner.className = `${PREFIX}-banner`;

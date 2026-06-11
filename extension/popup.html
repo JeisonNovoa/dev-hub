@@ -74,6 +74,7 @@
     <p class="vault-section-title">Todos los elementos <span id="vault-count" class="muted"></span></p>
     <div id="vault-list" class="vault-list"></div>
     <p id="vault-empty" class="muted small" hidden>Sin credenciales guardadas aún.</p>
+    <p id="vault-error" class="error" hidden></p>
 
     <!-- Pie -->
     <div class="vault-footer">
@@ -96,12 +97,22 @@
     <input id="form-label" type="text" placeholder="ej. Cartesia" />
     <label>URL</label>
     <input id="form-url" type="url" placeholder="https://…" />
+    <label>Método de acceso</label>
+    <select id="form-login-via">
+      <option value="email">email + contraseña</option>
+      <option value="google">Google</option>
+      <option value="github">GitHub</option>
+      <option value="microsoft">Microsoft</option>
+      <option value="other">otro</option>
+    </select>
     <label>Usuario / email</label>
     <input id="form-username" type="text" autocomplete="off" />
-    <label>Contraseña</label>
-    <div class="pwd-row">
-      <input id="form-password" type="password" autocomplete="new-password" />
-      <button id="form-pwd-toggle" type="button" class="icon-btn" title="Mostrar/ocultar">👁</button>
+    <div id="form-password-block">
+      <label>Contraseña</label>
+      <div class="pwd-row">
+        <input id="form-password" type="password" autocomplete="new-password" />
+        <button id="form-pwd-toggle" type="button" class="icon-btn" title="Mostrar/ocultar">👁</button>
+      </div>
     </div>
     <label>Categoría</label>
     <select id="form-category">

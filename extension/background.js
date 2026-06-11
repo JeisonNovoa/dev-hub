@@ -185,6 +185,8 @@ async function handleSubmitDetected({ domain, url, username, password }, sender)
   await chrome.storage.session.set({
     [`pending_${sender.tab.id}`]: { domain, url, username, password, at: Date.now() },
   });
+  // Un login con contraseña invalida cualquier sospecha de OAuth en esa pestaña.
+  await chrome.storage.session.remove([`oauth_${sender.tab.id}`]);
   return { ok: true };
 }
 
@@ -327,6 +329,78 @@ async function handleSetDraft({ draft }) {
   return { ok: true };
 }
 
+// ─── Detección de logins OAuth (Google/GitHub/Microsoft) ────────────────────
+// El content script avisa cuando el usuario hace clic en un botón tipo
+// "Continuar con Google". No podemos ver qué cuenta eligió (el flujo ocurre en
+// el dominio del proveedor), así que al volver ofrecemos guardar el MÉTODO y el
+// usuario completa el correo al editar.
+
+async function handleOauthDetected({ domain, provider }, sender) {
+  if (sender.tab?.id == null || !domain || !provider) return { ok: true };
+  await chrome.storage.session.set({
+    [`oauth_${sender.tab.id}`]: { domain, provider, at: Date.now() },
+  });
+  return { ok: true };
+}
+
+async function handleGetPendingOauth(_msg, sender) {
+  const tabId = sender.tab?.id;
+  if (tabId == null) return { pending: null };
+  const key = `oauth_${tabId}`;
+  const stored = (await getSession([key]))[key];
+  if (!stored || Date.now() - stored.at > PENDING_SAVE_TTL_MS) {
+    if (stored) await chrome.storage.session.remove([key]);
+    return { pending: null };
+  }
+  // Tras el roundtrip por el proveedor se puede aterrizar en un subdominio
+  // (app.sitio.com): aceptamos parentesco en ambos sentidos, nunca dominios ajenos.
+  const senderDomain = hostnameOf(sender.url || '');
+  const related =
+    senderDomain === stored.domain ||
+    senderDomain.endsWith('.' + stored.domain) ||
+    stored.domain.endsWith('.' + senderDomain);
+  if (!related) return { pending: null };
+
+  // No ofrecer si ya hay una credencial de ese proveedor en el dominio.
+  const token = await getUnlockedToken();
+  if (!token) return { pending: null };
+  try {
+    const match = await api(`/api/extension/credentials/match?domain=${encodeURIComponent(stored.domain)}`, { token });
+    if (match.items.some((i) => i.login_via === stored.provider)) {
+      await chrome.storage.session.remove([key]);
+      return { pending: null };
+    }
+  } catch (_) {
+    return { pending: null };
+  }
+  return { pending: { domain: stored.domain, provider: stored.provider } };
+}
+
+async function handleDismissOauth(_msg, sender) {
+  if (sender.tab?.id != null) await chrome.storage.session.remove([`oauth_${sender.tab.id}`]);
+  return { ok: true };
+}
+
+// Crea el borrador para el formulario del popup (el usuario completa el correo).
+async function handleDraftFromOauth(_msg, sender) {
+  const tabId = sender.tab?.id;
+  if (tabId == null) return { ok: false };
+  const key = `oauth_${tabId}`;
+  const stored = (await getSession([key]))[key];
+  if (!stored) return { ok: false };
+  await chrome.storage.session.set({
+    draft: {
+      label: stored.domain,
+      url: `https://${stored.domain}`,
+      username: '',
+      login_via: stored.provider,
+      at: Date.now(),
+    },
+  });
+  await chrome.storage.session.remove([key]);
+  return { ok: true };
+}
+
 // Convierte el "pending" de una pestaña (con su contraseña) en un borrador editable
 // que el popup abrirá en el formulario. Lo usa el botón "Editar" del banner.
 async function handleDraftFromPending(_msg, sender) {
@@ -423,6 +497,10 @@ const HANDLERS = {
   SET_DRAFT: (msg) => handleSetDraft(msg),
   CLEAR_DRAFT: () => handleClearDraft(),
   DRAFT_FROM_PENDING: (msg, sender) => handleDraftFromPending(msg, sender),
+  OAUTH_DETECTED: (msg, sender) => handleOauthDetected(msg, sender),
+  GET_PENDING_OAUTH: (msg, sender) => handleGetPendingOauth(msg, sender),
+  DISMISS_OAUTH: (msg, sender) => handleDismissOauth(msg, sender),
+  DRAFT_FROM_OAUTH: (msg, sender) => handleDraftFromOauth(msg, sender),
 };
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

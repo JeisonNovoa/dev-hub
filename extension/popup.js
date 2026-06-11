@@ -127,6 +127,12 @@ function credRow(cred, { showFill = false } = {}) {
   const name = document.createElement('div');
   name.className = 'cred-name';
   name.textContent = cred.label;
+  if (cred.login_via && cred.login_via !== 'email') {
+    const badge = document.createElement('span');
+    badge.className = `provider-badge provider-${cred.login_via}`;
+    badge.textContent = cred.login_via === 'other' ? 'otro' : cred.login_via;
+    name.appendChild(badge);
+  }
   const user = document.createElement('div');
   user.className = 'cred-user';
   user.textContent = cred.username || '—';
@@ -221,11 +227,20 @@ function renderVault(filter = '') {
 }
 
 async function loadVault() {
+  $('vault-error').hidden = true;
   const [vault, tab] = await Promise.all([
     send({ type: 'VAULT_LIST' }),
     send({ type: 'ACTIVE_TAB' }),
   ]);
-  if (!vault.ok) { if (vault.locked) refresh(); return; }
+  if (!vault.ok) {
+    if (vault.locked) { refresh(); return; }
+    $('vault-empty').hidden = true;
+    $('vault-error').textContent =
+      `No se pudo cargar la bóveda: ${vault.error || 'error de conexión'}. ` +
+      'Revisa la URL del servidor (cerrar sesión → configuración avanzada).';
+    $('vault-error').hidden = false;
+    return;
+  }
   allCreds = vault.items;
   activeDomain = tab.domain || null;
   renderVault($('vault-search').value);
@@ -249,6 +264,11 @@ $('vault-new').addEventListener('click', () => openForm(null));
 
 // ─── Formulario (nueva / editar) ─────────────────────────────────────────────
 
+function syncPasswordBlock() {
+  // Para accesos OAuth (Google, GitHub…) no hay contraseña propia que guardar.
+  $('form-password-block').hidden = $('form-login-via').value !== 'email';
+}
+
 // cred: credencial existente a editar (o null para nueva).
 // draft: datos prellenados (del banner "editar antes de guardar"), opcional.
 function openForm(cred, draft = null) {
@@ -260,10 +280,14 @@ function openForm(cred, draft = null) {
   $('form-password').value = draft?.password || '';
   $('form-password').placeholder = cred ? '(sin cambios)' : '';
   $('form-category').value = cred?.category || 'personal';
+  $('form-login-via').value = cred?.login_via || draft?.login_via || 'email';
+  syncPasswordBlock();
   $('form-error').hidden = true;
   showView('view-form');
   $('form-label').focus();
 }
+
+$('form-login-via').addEventListener('change', syncPasswordBlock);
 
 $('form-back').addEventListener('click', () => { showView('view-unlocked'); loadVault(); });
 $('form-pwd-toggle').addEventListener('click', () => {
@@ -277,15 +301,17 @@ $('form-submit').addEventListener('click', async () => {
   const label = $('form-label').value.trim();
   if (!label) { $('form-error').textContent = 'El nombre es obligatorio'; $('form-error').hidden = false; return; }
 
+  const loginVia = $('form-login-via').value;
   const fields = {
     label,
     url: $('form-url').value.trim(),
     username: $('form-username').value.trim(),
     category: $('form-category').value,
+    login_via: loginVia,
   };
   const pwd = $('form-password').value;
-  // Al editar, solo cambia la contraseña si se escribió algo.
-  if (pwd || !id) fields.password = pwd;
+  // Al editar, solo cambia la contraseña si se escribió algo. OAuth no lleva contraseña.
+  if (loginVia === 'email' && (pwd || !id)) fields.password = pwd;
 
   const btn = $('form-submit');
   btn.disabled = true;

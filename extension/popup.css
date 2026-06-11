@@ -50,6 +50,10 @@ body {
 
 .view { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
 
+/* CRÍTICO: nuestro display:flex anula el atributo hidden del navegador; sin esta
+   regla todas las vistas (login, PIN, bóveda, formulario) se apilan a la vez. */
+.view[hidden] { display: none !important; }
+
 label {
   font-family: Consolas, monospace;
   font-size: 10px;
@@ -227,6 +231,21 @@ input:focus { border-color: rgba(34, 197, 94, 0.5); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.provider-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  vertical-align: 1px;
+  background: #2a2d3e;
+  color: var(--text-muted);
+}
+.provider-google { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+.provider-github { background: #374151; color: #d1d5db; }
+.provider-microsoft { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
 
 .cred-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .cred-action {

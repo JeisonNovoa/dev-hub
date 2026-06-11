@@ -190,6 +190,28 @@ def test_vault_requires_token(client):
     assert client.get("/api/extension/credentials").status_code == 401
 
 
+def test_create_oauth_credential_from_extension(client, ext_token):
+    res = client.post("/api/extension/credentials", json={
+        "label": "deepgram.com",
+        "username": "yo@gmail.com",
+        "url": "https://deepgram.com",
+        "login_via": "google",
+    }, headers=_bearer(ext_token))
+    assert res.status_code == 201
+    detail = client.get(f"/api/credentials/{res.json()['id']}").json()
+    assert detail["login_via"] == "google"
+    assert detail["password"] is None
+
+
+def test_create_credential_normalizes_invalid_login_via(client, ext_token):
+    res = client.post("/api/extension/credentials", json={
+        "label": "x", "url": "https://x.com", "login_via": "facebook-falso",
+    }, headers=_bearer(ext_token))
+    assert res.status_code == 201
+    detail = client.get(f"/api/credentials/{res.json()['id']}").json()
+    assert detail["login_via"] == "email"
+
+
 # ─── Gestión de tokens desde la web (cookie) ─────────────────────────────────
 
 def test_list_and_revoke_tokens_via_web(client, ext_token):
