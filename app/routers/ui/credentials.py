@@ -15,6 +15,38 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _get_active_credential_or_404(cred_id: int, user_id: int, db: Session) -> Credential:
+    cred = (
+        db.query(Credential)
+        .filter(Credential.id == cred_id, Credential.user_id == user_id, Credential.deleted_at.is_(None))
+        .first()
+    )
+    if not cred:
+        raise HTTPException(status_code=404)
+    return cred
+
+
+def _apply_credential_form(
+    cred: Credential,
+    label: str,
+    username: str,
+    password: str,
+    url: str,
+    category: str,
+    login_via: str,
+    notes: str,
+    project_id: str,
+) -> None:
+    cred.label = label
+    cred.username = username or None
+    cred.password = password or None
+    cred.url = url or None
+    cred.category = category
+    cred.login_via = login_via
+    cred.notes = notes or None
+    cred.project_id = int(project_id) if project_id.strip() else None
+
+
 @router.get("/credentials", response_class=HTMLResponse)
 def credentials_page(
     request: Request,
@@ -34,7 +66,7 @@ def credentials_page(
     credentials = _query_credentials(q, category, pid, current_user.id, db, sort, order)
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse(
-            "credentials/partials/credential_rows.html",
+            "credentials/partials/credential_results.html",
             {"request": request, "credentials": credentials, "current_user": current_user},
         )
     trash_count = (
@@ -68,6 +100,73 @@ def credentials_page(
 @router.get("/credentials/trash", response_class=HTMLResponse)
 def trash_page() -> RedirectResponse:
     return RedirectResponse(url="/trash", status_code=301)
+
+
+@router.get("/credentials/{cred_id}", response_class=HTMLResponse)
+def credential_detail_page(
+    cred_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    cred = _get_active_credential_or_404(cred_id, current_user.id, db)
+    return templates.TemplateResponse(
+        "credentials/detail.html",
+        {"request": request, "cred": cred, "current_user": current_user},
+    )
+
+
+@router.get("/ui/credentials/{cred_id}/detail-card", response_class=HTMLResponse)
+def credential_detail_card(
+    cred_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    cred = _get_active_credential_or_404(cred_id, current_user.id, db)
+    return templates.TemplateResponse(
+        "credentials/partials/detail_card.html",
+        {"request": request, "cred": cred, "current_user": current_user},
+    )
+
+
+@router.get("/ui/credentials/{cred_id}/detail-edit", response_class=HTMLResponse)
+def credential_detail_edit(
+    cred_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    cred = _get_active_credential_or_404(cred_id, current_user.id, db)
+    return templates.TemplateResponse(
+        "credentials/partials/detail_edit.html",
+        {"request": request, "cred": cred, "current_user": current_user},
+    )
+
+
+@router.post("/ui/credentials/{cred_id}/detail-save", response_class=HTMLResponse)
+def credential_detail_save(
+    cred_id: int,
+    request: Request,
+    label: str = Form(...),
+    username: str = Form(""),
+    password: str = Form(""),
+    url: str = Form(""),
+    category: str = Form("work"),
+    login_via: str = Form("email"),
+    notes: str = Form(""),
+    project_id: str = Form(""),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    cred = _get_active_credential_or_404(cred_id, current_user.id, db)
+    _apply_credential_form(cred, label, username, password, url, category, login_via, notes, project_id)
+    db.commit()
+    db.refresh(cred)
+    return templates.TemplateResponse(
+        "credentials/partials/detail_card.html",
+        {"request": request, "cred": cred, "current_user": current_user},
+    )
 
 
 @router.post("/ui/credentials/{cred_id}/trash", response_class=HTMLResponse)
@@ -208,21 +307,8 @@ def credential_save(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    cred = (
-        db.query(Credential)
-        .filter(Credential.id == cred_id, Credential.user_id == current_user.id, Credential.deleted_at.is_(None))
-        .first()
-    )
-    if not cred:
-        raise HTTPException(status_code=404)
-    cred.label = label
-    cred.username = username or None
-    cred.password = password or None
-    cred.url = url or None
-    cred.category = category
-    cred.login_via = login_via
-    cred.notes = notes or None
-    cred.project_id = int(project_id) if project_id.strip() else None
+    cred = _get_active_credential_or_404(cred_id, current_user.id, db)
+    _apply_credential_form(cred, label, username, password, url, category, login_via, notes, project_id)
     db.commit()
     db.refresh(cred)
     return templates.TemplateResponse(

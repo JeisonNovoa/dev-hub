@@ -575,3 +575,75 @@ def test_repo_env_var_new_submit(client):
     })
     assert res.status_code == 200
     assert b"REDIS_URL" in res.content
+
+
+# ─── Vista de detalle de credencial ──────────────────────────────────────────
+
+def test_credential_detail_page(client):
+    cred_id = _create_credential(client, "Mi Banco")
+    res = client.get(f"/credentials/{cred_id}")
+    assert res.status_code == 200
+    assert b"Mi Banco" in res.content
+    assert b"cred-detail" in res.content
+
+
+def test_credential_detail_404(client):
+    res = client.get("/credentials/99999")
+    assert res.status_code == 404
+
+
+def test_credential_detail_requires_ownership(client, db):
+    from app.auth import hash_password
+    from app.models import Credential, User
+
+    other = User(email="otro@test.local", hashed_password=hash_password("password123"), is_active=True)
+    db.add(other)
+    db.flush()
+    cred = Credential(label="Ajena", user_id=other.id)
+    db.add(cred)
+    db.commit()
+
+    res = client.get(f"/credentials/{cred.id}")
+    assert res.status_code == 404
+
+
+def test_credentials_trash_redirect_still_works(client):
+    res = client.get("/credentials/trash", follow_redirects=False)
+    assert res.status_code == 301
+
+
+def test_credential_detail_edit_form(client):
+    cred_id = _create_credential(client)
+    res = client.get(f"/ui/credentials/{cred_id}/detail-edit")
+    assert res.status_code == 200
+    assert b"detail-save" in res.content
+
+
+def test_credential_detail_save(client):
+    cred_id = _create_credential(client, "Antes")
+    res = client.post(f"/ui/credentials/{cred_id}/detail-save", data={
+        "label": "Despues",
+        "username": "nuevo@mail.com",
+        "password": "secreta123",
+        "category": "personal",
+        "login_via": "email",
+    })
+    assert res.status_code == 200
+    assert b"Despues" in res.content
+    assert b"nuevo@mail.com" in res.content
+
+
+def test_credential_detail_card_partial(client):
+    cred_id = _create_credential(client, "CardParcial")
+    res = client.get(f"/ui/credentials/{cred_id}/detail-card")
+    assert res.status_code == 200
+    assert b"CardParcial" in res.content
+
+
+def test_credentials_list_renders_mobile_cards_and_table(client):
+    cred_id = _create_credential(client, "Card Test")
+    res = client.get("/credentials")
+    assert res.status_code == 200
+    assert b'id="cred-results"' in res.content
+    assert f'href="/credentials/{cred_id}"'.encode() in res.content
+    assert b'id="cred-table-body"' in res.content
