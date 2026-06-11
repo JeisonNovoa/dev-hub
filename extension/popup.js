@@ -52,6 +52,8 @@ async function refresh() {
     return;
   }
   setBadge('activo', 'ok');
+  $('vault-email').textContent = st.email || '';
+  $('vault-footer-status').title = `Conectado como ${st.email || ''} en ${st.apiUrl || ''}`;
   showView('view-unlocked');
   const tick = () => {
     const ms = st.unlockedUntil - Date.now();
@@ -237,7 +239,8 @@ async function loadVault() {
     $('vault-empty').hidden = true;
     $('vault-error').textContent =
       `No se pudo cargar la bóveda: ${vault.error || 'error de conexión'}. ` +
-      'Revisa la URL del servidor (cerrar sesión → configuración avanzada).';
+      'Si tu Dev Hub está en Render gratis puede estar despertando — espera ~30s y reintenta. ' +
+      'Si persiste, revisa la URL del servidor (cerrar sesión → configuración avanzada).';
     $('vault-error').hidden = false;
     return;
   }

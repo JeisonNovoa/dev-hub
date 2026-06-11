@@ -43,10 +43,13 @@ Funciona en Chrome, Edge y Brave. **Costo: $0** (se usa en modo desarrollador).
 - **Desbloqueo temporal**: tras poner el PIN queda desbloqueado **5 minutos**
   (cada uso renueva el tiempo). Después vuelve a pedir el PIN.
 - **Guardar un login nuevo**: inicia sesión normal en un sitio. En la página
-  siguiente aparece un aviso "¿Guardar … en Dev Hub?" con tres opciones:
-  **Guardar** (rápido), **Editar** (abre la extensión con el formulario
-  prellenado para ajustar nombre/categoría antes de guardar) o **No**. Si la
-  credencial ya existe en ese dominio, el aviso no aparece.
+  siguiente aparece un aviso "¿Guardar … en Dev Hub?" con **Guardar** o **No**.
+  Al pulsar Guardar se abre la extensión directamente en el formulario con lo
+  capturado prellenado (nombre, URL, usuario, contraseña o método OAuth) — tú
+  eliges la categoría y ajustas lo que quieras antes de confirmar. Si la
+  credencial ya existe en ese dominio, el aviso no aparece. (En Chrome
+  anteriores a 127 el popup no puede abrirse solo: el aviso te pide abrir la
+  extensión manualmente.)
 - **Logins con Google/GitHub/Microsoft (OAuth)**: las credenciales OAuth se
   marcan con su insignia en la bóveda y en el autofill. Al "rellenar" una, se
   completa el correo y te recuerda el método ("aquí inicias con Google usando

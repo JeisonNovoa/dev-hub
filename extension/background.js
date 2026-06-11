@@ -8,7 +8,7 @@ import { encryptWithPin, decryptWithPin } from './crypto.js';
 
 // URL por defecto de tu Dev Hub. Si tu instancia está en otro dominio, se puede
 // cambiar desde "configuración avanzada" en el popup (queda guardada en storage).
-const DEFAULT_API_URL = 'https://dev-hub.onrender.com';
+const DEFAULT_API_URL = 'https://dev-hub-ogdr.onrender.com';
 
 const UNLOCK_MS = 5 * 60 * 1000;       // ventana de desbloqueo (deslizante)
 const MAX_PIN_ATTEMPTS = 5;            // intentos fallidos antes de borrar todo
@@ -229,35 +229,16 @@ async function handleDismissPending(_msg, sender) {
   return { ok: true };
 }
 
-async function handleSavePending(_msg, sender) {
-  const token = await getUnlockedToken();
-  if (!token) return { ok: false, locked: true };
-  const tabId = sender.tab?.id;
-  const key = `pending_${tabId}`;
-  const stored = (await getSession([key]))[key];
-  if (!stored) return { ok: false, error: 'Nada pendiente por guardar' };
-
-  // Evitar duplicados: si ya existe una credencial del dominio con el mismo usuario.
-  const match = await api(`/api/extension/credentials/match?domain=${encodeURIComponent(stored.domain)}`, { token });
-  const exists = match.items.some((i) => (i.username || '').toLowerCase() === stored.username.toLowerCase());
-  if (exists) {
-    await chrome.storage.session.remove([key]);
-    return { ok: true, already: true };
+// Abre el popup de la extensión (Chrome 127+). El banner lo usa tras dejar el
+// borrador, para llevar al usuario directo al formulario prellenado. Si el
+// navegador no lo permite, el banner muestra la instrucción manual.
+async function handleOpenPopup() {
+  try {
+    await chrome.action.openPopup();
+    return { opened: true };
+  } catch (_) {
+    return { opened: false };
   }
-
-  await api('/api/extension/credentials', {
-    method: 'POST',
-    token,
-    body: {
-      label: stored.domain,
-      username: stored.username,
-      password: stored.password,
-      url: `https://${stored.domain}`,
-    },
-  });
-  await chrome.storage.session.remove([key]);
-  await renewUnlock();
-  return { ok: true };
 }
 
 function hostnameOf(url) {
@@ -485,7 +466,7 @@ const HANDLERS = {
   SUBMIT_DETECTED: (msg, sender) => handleSubmitDetected(msg, sender),
   GET_PENDING_SAVE: (msg, sender) => handleGetPendingSave(msg, sender),
   DISMISS_PENDING: (msg, sender) => handleDismissPending(msg, sender),
-  SAVE_PENDING: (msg, sender) => handleSavePending(msg, sender),
+  OPEN_POPUP: () => handleOpenPopup(),
   VAULT_LIST: () => handleVaultList(),
   COPY_SECRET: (msg) => handleCopySecret(msg),
   DELETE_CREDENTIAL: (msg) => handleDeleteCredential(msg),

@@ -335,21 +335,33 @@
     const res = await send({ type: 'GET_PENDING_OAUTH' });
     if (!res?.pending) return;
     const provider = PROVIDER_LABELS[res.pending.provider] || res.pending.provider;
+    showSaveOfferBanner({
+      message: `Parece que inicias con ${provider} en ${res.pending.domain}. ¿Guardar el acceso en Dev Hub?`,
+      draftMsgType: 'DRAFT_FROM_OAUTH',
+      dismissMsgType: 'DISMISS_OAUTH',
+    });
+  }
 
-    const { banner, text, actions } = buildBanner(
-      `Parece que inicias con ${provider} en ${res.pending.domain}. ¿Guardar el acceso en Dev Hub?`,
-    );
+  // Banner genérico Guardar/No: al guardar deja el borrador y abre el popup en el
+  // formulario prellenado (categoría y ajustes los pone el usuario allí).
+  function showSaveOfferBanner({ message, draftMsgType, dismissMsgType }) {
+    const { banner, text, actions } = buildBanner(message);
 
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.className = `${PREFIX}-btn`;
-    addBtn.textContent = 'Añadir correo y guardar';
-    addBtn.addEventListener('click', async () => {
-      const r = await send({ type: 'DRAFT_FROM_OAUTH' });
-      if (r.ok) {
-        text.textContent = 'Abre la extensión de Dev Hub (arriba a la derecha) para completar el correo y guardar.';
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = `${PREFIX}-btn`;
+    saveBtn.textContent = 'Guardar';
+    saveBtn.addEventListener('click', async () => {
+      const drafted = await send({ type: draftMsgType });
+      if (!drafted.ok) { banner.remove(); return; }
+      const popup = await send({ type: 'OPEN_POPUP' });
+      if (popup.opened) {
+        banner.remove();
+      } else {
+        // Chrome < 127 no permite abrir el popup desde código.
+        text.textContent = 'Abre la extensión de Dev Hub (arriba a la derecha) para completar y guardar.';
         actions.remove();
-        setTimeout(() => banner.remove(), 6000);
+        setTimeout(() => banner.remove(), 8000);
       }
     });
 
@@ -358,106 +370,22 @@
     noBtn.className = `${PREFIX}-btn ${PREFIX}-btn-ghost`;
     noBtn.textContent = 'No';
     noBtn.addEventListener('click', async () => {
-      await send({ type: 'DISMISS_OAUTH' });
+      await send({ type: dismissMsgType });
       banner.remove();
     });
 
-    actions.append(addBtn, noBtn);
+    actions.append(saveBtn, noBtn);
     document.body.appendChild(banner);
   }
 
   async function maybeShowSaveBanner() {
     const res = await send({ type: 'GET_PENDING_SAVE' });
     if (!res?.pending) { maybeShowOauthBanner(); return; }
-
-    const banner = document.createElement('div');
-    banner.className = `${PREFIX}-banner`;
-
-    const text = document.createElement('span');
-    text.className = `${PREFIX}-banner-text`;
-    text.textContent = `¿Guardar ${res.pending.domain} (${res.pending.username}) en Dev Hub?`;
-
-    const actions = document.createElement('span');
-    actions.className = `${PREFIX}-banner-actions`;
-
-    const saveBtn = document.createElement('button');
-    saveBtn.type = 'button';
-    saveBtn.className = `${PREFIX}-btn`;
-    saveBtn.textContent = 'Guardar';
-
-    const editBtn = document.createElement('button');
-    editBtn.type = 'button';
-    editBtn.className = `${PREFIX}-btn ${PREFIX}-btn-ghost`;
-    editBtn.textContent = 'Editar';
-    editBtn.title = 'Editar antes de guardar (nombre, categoría…)';
-
-    const noBtn = document.createElement('button');
-    noBtn.type = 'button';
-    noBtn.className = `${PREFIX}-btn ${PREFIX}-btn-ghost`;
-    noBtn.textContent = 'No';
-
-    const pinInput = document.createElement('input');
-    pinInput.type = 'password';
-    pinInput.inputMode = 'numeric';
-    pinInput.className = `${PREFIX}-pin ${PREFIX}-banner-pin`;
-    pinInput.placeholder = 'PIN';
-    pinInput.maxLength = 12;
-    pinInput.style.display = 'none';
-
-    const doSave = async () => {
-      const res2 = await send({ type: 'SAVE_PENDING' });
-      if (res2.locked) {
-        pinInput.style.display = 'inline-block';
-        text.textContent = 'Pon tu PIN de Dev Hub para guardar:';
-        pinInput.focus();
-        return;
-      }
-      if (res2.already) {
-        text.textContent = 'Ya estaba guardada en Dev Hub ✓';
-      } else if (res2.ok) {
-        text.textContent = 'Guardada en Dev Hub ✓';
-      } else {
-        text.textContent = res2.error || 'No se pudo guardar';
-      }
-      actions.remove();
-      pinInput.remove();
-      setTimeout(() => banner.remove(), 2500);
-    };
-
-    pinInput.addEventListener('keydown', async (e) => {
-      if (e.key !== 'Enter') return;
-      e.preventDefault();
-      const unlock = await send({ type: 'UNLOCK', pin: pinInput.value.trim() });
-      if (unlock.ok) {
-        pinInput.style.display = 'none';
-        await doSave();
-      } else {
-        pinInput.value = '';
-        text.textContent = unlock.error || 'PIN incorrecto';
-        if (unlock.wiped) setTimeout(() => banner.remove(), 2500);
-      }
+    showSaveOfferBanner({
+      message: `¿Guardar ${res.pending.domain} (${res.pending.username}) en Dev Hub?`,
+      draftMsgType: 'DRAFT_FROM_PENDING',
+      dismissMsgType: 'DISMISS_PENDING',
     });
-
-    saveBtn.addEventListener('click', doSave);
-
-    editBtn.addEventListener('click', async () => {
-      const res = await send({ type: 'DRAFT_FROM_PENDING' });
-      if (res.ok) {
-        text.textContent = 'Abre la extensión de Dev Hub (arriba a la derecha) para editar y guardar.';
-        actions.remove();
-        pinInput.remove();
-        setTimeout(() => banner.remove(), 6000);
-      }
-    });
-
-    noBtn.addEventListener('click', async () => {
-      await send({ type: 'DISMISS_PENDING' });
-      banner.remove();
-    });
-
-    actions.append(saveBtn, editBtn, noBtn);
-    banner.append(text, pinInput, actions);
-    document.body.appendChild(banner);
   }
 
   // ─── Arranque + observador para SPAs ───────────────────────────────────────

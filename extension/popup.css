@@ -307,7 +307,14 @@ input:focus { border-color: rgba(34, 197, 94, 0.5); }
   padding-top: 8px;
   margin-top: 2px;
 }
-.status-ok-inline { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--accent); font-family: Consolas, monospace; }
+.status-ok-inline { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--accent); font-family: Consolas, monospace; min-width: 0; }
+.vault-email {
+  color: var(--text-dim);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .vault-footer-actions { display: flex; gap: 12px; }
 .link-btn.danger:hover { color: var(--red); }
 
