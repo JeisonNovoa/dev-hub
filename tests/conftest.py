@@ -34,6 +34,13 @@ def setup_db():
     Base.metadata.drop_all(bind=engine)
 
 
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Evita que el rate limit se acumule entre tests (slowapi usa storage en memoria)."""
+    from app.limiter import limiter
+    limiter.reset()
+
+
 @pytest.fixture
 def db():
     session = TestingSessionLocal()

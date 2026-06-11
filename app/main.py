@@ -10,10 +10,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 from app.limiter import limiter
 from app.logging_config import configure_logging
-from app.routers.api import commands, credentials, env_vars, export, links, me, projects, repos, services
+from app.routers.api import commands, credentials, env_vars, export, extension, links, me, projects, repos, services
 from app.routers.ui import auth as ui_auth
 from app.routers.ui import credentials as ui_credentials
 from app.routers.ui import dashboard, project_detail, trash as ui_trash
+from app.routers.ui import extension as ui_extension
 from app.routers.ui import import_project as ui_import
 
 configure_logging(debug=settings.debug)
@@ -93,6 +94,7 @@ app.include_router(services.router, prefix="/api/services", tags=["services"])
 app.include_router(credentials.router, prefix="/api/credentials", tags=["credentials"])
 app.include_router(me.router, prefix="/api/me", tags=["me"])
 app.include_router(export.router, prefix="/api/export", tags=["export"])
+app.include_router(extension.router, prefix="/api/extension", tags=["extension"])
 
 # UI routers — devuelven HTML
 app.include_router(ui_trash.router)
@@ -100,3 +102,4 @@ app.include_router(dashboard.router)
 app.include_router(project_detail.router)
 app.include_router(ui_credentials.router)
 app.include_router(ui_import.router)
+app.include_router(ui_extension.router)

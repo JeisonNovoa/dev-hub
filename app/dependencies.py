@@ -1,12 +1,13 @@
 import logging
+from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.auth import COOKIE_NAME, read_session_cookie
+from app.auth import COOKIE_NAME, hash_extension_token, read_session_cookie
 from app.database import get_db
-from app.models import Project, User
+from app.models import ExtensionToken, Project, User
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,31 @@ def get_current_user_optional(
     if user_id is None:
         return None
     return db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
+
+
+def get_user_from_extension_token(request: Request, db: Session = Depends(get_db)) -> User:
+    """Autentica peticiones de la extensión vía header Authorization: Bearer <token>."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token de extensión requerido")
+    token = auth[len("Bearer "):].strip()
+    record = (
+        db.query(ExtensionToken)
+        .filter(
+            ExtensionToken.token_hash == hash_extension_token(token),
+            ExtensionToken.revoked_at.is_(None),
+        )
+        .first()
+    )
+    if not record:
+        logger.warning("Token de extensión inválido o revocado")
+        raise HTTPException(status_code=401, detail="Token inválido o revocado")
+    user = db.query(User).filter(User.id == record.user_id, User.is_active.is_(True)).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario inactivo")
+    record.last_used_at = datetime.now(timezone.utc)
+    db.commit()
+    return user
 
 
 def get_project_or_404(slug: str, db: Session, current_user: User) -> Project:

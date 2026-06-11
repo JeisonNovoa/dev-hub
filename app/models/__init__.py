@@ -4,6 +4,7 @@ from app.models.project import Command, EnvVariable, Project, QuickLink
 from app.models.repo import Repo
 from app.models.service import Service
 from app.models.credential import Credential
+from app.models.extension_token import ExtensionToken
 
 __all__ = [
     "Base",
@@ -16,4 +17,5 @@ __all__ = [
     "Repo",
     "Service",
     "Credential",
+    "ExtensionToken",
 ]

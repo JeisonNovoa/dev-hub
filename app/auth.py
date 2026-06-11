@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from functools import lru_cache
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -32,3 +34,14 @@ def read_session_cookie(token: str, max_age: int = 86400 * 30) -> int | None:
         return _serializer().loads(token, max_age=max_age)
     except (SignatureExpired, BadSignature):
         return None
+
+
+# --- Tokens de la extensión del navegador ---
+# Se guarda solo el hash SHA-256; el token en claro se entrega una única vez.
+
+def generate_extension_token() -> str:
+    return "dvh_" + secrets.token_urlsafe(32)
+
+
+def hash_extension_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Extensión — Dev Hub{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-lg font-mono font-semibold text-gray-100">extensión/</h1>
+  <p class="text-sm text-gray-500 mt-1">Autofill de credenciales en el navegador, conectado a tu Dev Hub.</p>
+</div>
+
+<div class="max-w-2xl space-y-5">
+
+  <!-- Cómo conectar -->
+  <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
+    <div class="px-5 py-3 border-b border-surface-border">
+      <h2 class="text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">cómo conectar</h2>
+    </div>
+    <div class="px-5 py-4 space-y-2 text-sm text-gray-400">
+      <p><span class="text-accent font-mono">1.</span> Carga la carpeta <code class="font-mono text-xs text-accent bg-surface rounded px-1.5 py-0.5">extension/</code> del repo en <code class="font-mono text-xs text-accent bg-surface rounded px-1.5 py-0.5">chrome://extensions</code> (modo desarrollador → "Cargar descomprimida").</p>
+      <p><span class="text-accent font-mono">2.</span> Abre la extensión, pon la URL de tu Dev Hub y entra con tu email y contraseña.</p>
+      <p><span class="text-accent font-mono">3.</span> Define tu PIN de desbloqueo (mínimo 4 dígitos). Listo: el ícono aparecerá en los formularios de login.</p>
+      <p class="text-xs text-gray-600 pt-1">El login crea un token de acceso que aparece abajo. Si pierdes el dispositivo o sospechas algo, revócalo aquí y la extensión queda desconectada.</p>
+    </div>
+  </section>
+
+  <!-- Tokens activos -->
+  <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
+    <div class="px-5 py-3 border-b border-surface-border">
+      <h2 class="text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">dispositivos conectados</h2>
+    </div>
+    <div class="divide-y divide-surface-border">
+      {% for token in tokens %}
+      <div id="ext-token-{{ token.id }}" class="px-5 py-3.5 flex items-center gap-3"
+           x-data="{ confirming: false }" @mouseleave="confirming = false">
+        <svg class="w-4 h-4 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm text-gray-200 truncate">{{ token.name }}</p>
+          <p class="text-xs font-mono text-gray-600">
+            conectado {{ token.created_at.strftime('%Y-%m-%d') }}
+            {% if token.last_used_at %} · último uso {{ token.last_used_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+          </p>
+        </div>
+        <button x-show="!confirming" @click="confirming = true"
+                class="text-xs font-mono px-2.5 py-1.5 rounded-lg border border-surface-border text-gray-500 hover:text-red-400 hover:border-red-800/50 transition-colors shrink-0">
+          revocar
+        </button>
+        <button x-show="confirming" style="display:none"
+                hx-post="/ui/extension/tokens/{{ token.id }}/revoke"
+                hx-target="#ext-token-{{ token.id }}"
+                hx-swap="outerHTML"
+                class="text-xs font-mono px-2.5 py-1.5 rounded-lg bg-red-900/40 border border-red-700/40 text-red-400 hover:bg-red-900/70 transition-colors shrink-0">
+          confirmar
+        </button>
+      </div>
+      {% else %}
+      <div class="px-5 py-8 text-center">
+        <p class="text-sm text-gray-500">Sin dispositivos conectados aún.</p>
+        <p class="text-xs text-gray-600 mt-1">Conecta la extensión desde el navegador y aparecerá aquí.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}
