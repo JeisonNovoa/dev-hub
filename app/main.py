@@ -14,6 +14,7 @@ from app.routers.api import commands, credentials, env_vars, export, links, me, 
 from app.routers.ui import auth as ui_auth
 from app.routers.ui import credentials as ui_credentials
 from app.routers.ui import dashboard, project_detail, trash as ui_trash
+from app.routers.ui import import_project as ui_import
 
 configure_logging(debug=settings.debug)
 
@@ -98,3 +99,4 @@ app.include_router(ui_trash.router)
 app.include_router(dashboard.router)
 app.include_router(project_detail.router)
 app.include_router(ui_credentials.router)
+app.include_router(ui_import.router)

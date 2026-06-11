@@ -12,6 +12,7 @@ from app.dependencies import get_current_user
 from app.jinja import templates
 from app.models import Project, User
 from app.models.project import TRASH_RETENTION_DAYS
+from app.routers.ui.import_project import render_import_prompt
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ def dashboard(
             "q": q,
             "status_filter": status,
             "status_counts": status_counts,
+            "import_prompt": render_import_prompt(),
             "current_user": current_user,
         },
     )

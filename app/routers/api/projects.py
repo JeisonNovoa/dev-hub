@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from slugify import slugify
 from sqlalchemy import Text, cast
 from sqlalchemy.orm import Session
@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user, get_project_or_404
 from app.models import Project, User
+from app.schemas.import_project import parse_project_import
 from app.schemas.pagination import Page
 from app.schemas.project import ProjectCreate, ProjectDetailResponse, ProjectResponse, ProjectUpdate
+from app.services.import_project import import_project
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -68,6 +70,29 @@ def create_project(
     db.refresh(project)
     logger.info("Proyecto creado: '%s' (id=%d)", project.slug, project.id)
     return project
+
+
+@router.post("/import", status_code=status.HTTP_201_CREATED)
+def import_project_endpoint(
+    raw: dict = Body(..., description="JSON generado por la IA con la estructura de ProjectImport"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Importa un proyecto completo (comandos, env vars, links, repos, servicios).
+
+    Tolerante por-item: los items inválidos se descartan y se devuelven en `skipped`.
+    Nunca modifica proyectos existentes; si el slug choca se crea con sufijo.
+    """
+    try:
+        data, skipped = parse_project_import(raw)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    project, counts = import_project(data, current_user.id, db)
+    return {
+        "project": ProjectResponse.model_validate(project).model_dump(),
+        "counts": counts,
+        "skipped": skipped,
+    }
 
 
 @router.get("/{slug}", response_model=ProjectDetailResponse)

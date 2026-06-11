@@ -1,0 +1,50 @@
+Analiza a fondo el repositorio de este proyecto para registrarlo en Dev Hub, mi hub personal que centraliza comandos, variables de entorno, links rapidos y servicios de cada proyecto.
+
+Revisa todo lo que aplique: README, package.json / pyproject.toml / requirements.txt / go.mod / Cargo.toml, Makefile, docker-compose.yml, Dockerfile, .env.example / .env.template (NUNCA leas .env real), configuracion de CI, y la salida de `git remote -v`.
+
+Genera UNICAMENTE un objeto JSON valido con esta estructura exacta:
+
+{
+  "name": "nombre del proyecto",
+  "description": "1-2 frases sobre que hace el proyecto",
+  "tech_stack": ["FastAPI", "React"],
+  "status": "active",
+  "notes": "markdown breve y opcional con lo esencial para retomar el proyecto",
+  "commands": [
+    {"label": "Iniciar servidor", "command": "uvicorn app.main:app --reload", "type": "start", "order": 0}
+  ],
+  "env_vars": [
+    {"key": "DATABASE_URL", "value": "", "description": "URL de la base de datos"}
+  ],
+  "links": [
+    {"label": "Repositorio", "url": "https://github.com/usuario/repo", "category": "repo"}
+  ],
+  "repos": [
+    {
+      "name": "backend",
+      "github_url": "https://github.com/usuario/repo",
+      "local_path": "C:/ruta/local/al/repo",
+      "description": "API del proyecto",
+      "commands": [],
+      "env_vars": []
+    }
+  ],
+  "services": [
+    {"name": "Supabase", "url": "https://supabase.com", "category": "db", "notes": "base de datos en produccion"}
+  ]
+}
+
+Reglas estrictas:
+- Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de codigo.
+- No inventes datos: si algo no existe en el repo, omite el campo o deja la lista vacia.
+- SEGURIDAD: nunca incluyas valores secretos. En env_vars pon "value": "" para claves de API, contrasenas, tokens y cualquier secreto. Solo importan "key" y "description". Valores no sensibles (puertos, flags, URLs publicas) si puedes incluirlos.
+- "type" de comandos: "start" | "migration" | "build" | "other".
+- "category" de links: "dashboard" | "repo" | "staging" | "prod" | "docs" | "monitoring" | "other".
+- "category" de servicios: "ai" | "auth" | "storage" | "db" | "deploy" | "messaging" | "monitoring" | "other".
+- "status": "active" | "paused" | "archived" (usa "active" si no esta claro).
+- tech_stack: lenguajes y frameworks principales, maximo 8.
+- Detecta servicios externos reales que use el proyecto (Supabase, OpenAI, Vercel, Stripe, Render...) a partir de dependencias y env vars.
+- Si es un solo repositorio simple, puedes dejar "repos" con un unico item (con su github_url y local_path) y poner los comandos/env_vars a nivel de proyecto.
+- Si es un monorepo o el proyecto tiene varios repos, usa "repos" y anida los comandos y env_vars propios de cada repo dentro de el.
+
+Al final entregame el JSON listo para pegarlo en Dev Hub (boton "importar" del dashboard) o guardalo como devhub.json para subirlo alli.
