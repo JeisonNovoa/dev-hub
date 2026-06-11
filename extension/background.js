@@ -6,6 +6,10 @@
 
 import { encryptWithPin, decryptWithPin } from './crypto.js';
 
+// URL por defecto de tu Dev Hub. Si tu instancia está en otro dominio, se puede
+// cambiar desde "configuración avanzada" en el popup (queda guardada en storage).
+const DEFAULT_API_URL = 'https://dev-hub.onrender.com';
+
 const UNLOCK_MS = 5 * 60 * 1000;       // ventana de desbloqueo (deslizante)
 const MAX_PIN_ATTEMPTS = 5;            // intentos fallidos antes de borrar todo
 const PENDING_SAVE_TTL_MS = 2 * 60 * 1000;
@@ -38,23 +42,28 @@ async function renewUnlock() {
 }
 
 async function status() {
-  const { apiUrl, email, encToken } = await getLocal(['apiUrl', 'email', 'encToken']);
+  const { email, encToken } = await getLocal(['email', 'encToken']);
   const token = await getUnlockedToken();
   const { unlockedUntil } = await getSession(['unlockedUntil']);
   return {
-    configured: Boolean(encToken && apiUrl),
+    configured: Boolean(encToken),       // ya tiene PIN definido
+    needsPin: Boolean(token) && !encToken, // logueado pero sin PIN aún
     unlocked: Boolean(token),
     email: email || null,
-    apiUrl: apiUrl || null,
+    apiUrl: await resolveApiUrl(),
     unlockedUntil: token ? unlockedUntil : null,
   };
 }
 
 // ─── Llamadas a la API ───────────────────────────────────────────────────────
 
-async function api(path, { method = 'GET', body = null, token = null } = {}) {
+async function resolveApiUrl() {
   const { apiUrl } = await getLocal(['apiUrl']);
-  if (!apiUrl) throw new Error('Extensión no configurada');
+  return (apiUrl || DEFAULT_API_URL).replace(/\/+$/, '');
+}
+
+async function api(path, { method = 'GET', body = null, token = null } = {}) {
+  const apiUrl = await resolveApiUrl();
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(`${apiUrl}${path}`, {
@@ -78,17 +87,29 @@ async function api(path, { method = 'GET', body = null, token = null } = {}) {
 
 // ─── Handlers de mensajes ────────────────────────────────────────────────────
 
-async function handleLogin({ apiUrl, email, password, pin, deviceName }) {
-  const cleanUrl = apiUrl.trim().replace(/\/+$/, '');
-  await chrome.storage.local.set({ apiUrl: cleanUrl });
+// Paso 1: login con email+contraseña. Crea el token pero aún no se guarda cifrado
+// (eso ocurre al definir el PIN). El token queda desbloqueado en sesión.
+async function handleLogin({ apiUrl, email, password, deviceName }) {
+  if (apiUrl && apiUrl.trim()) {
+    await chrome.storage.local.set({ apiUrl: apiUrl.trim().replace(/\/+$/, '') });
+  }
   const data = await api('/api/extension/login', {
     method: 'POST',
     body: { email, password, name: deviceName || 'Chrome' },
   });
-  const encToken = await encryptWithPin(data.token, pin);
-  await chrome.storage.local.set({ apiUrl: cleanUrl, email: data.email, encToken, pinAttempts: 0 });
+  await chrome.storage.local.set({ email: data.email });
   await chrome.storage.session.set({ token: data.token, unlockedUntil: Date.now() + UNLOCK_MS });
   return { ok: true, email: data.email };
+}
+
+// Paso 2: definir el PIN una sola vez. Cifra el token ya obtenido en el login.
+async function handleSetPin({ pin }) {
+  const token = await getUnlockedToken();
+  if (!token) return { ok: false, error: 'Inicia sesión primero' };
+  const encToken = await encryptWithPin(token, pin);
+  await chrome.storage.local.set({ encToken, pinAttempts: 0 });
+  await renewUnlock();
+  return { ok: true };
 }
 
 async function handleUnlock({ pin }) {
@@ -179,6 +200,25 @@ async function handleGetPendingSave(_msg, sender) {
   // Solo ofrecer guardar en el MISMO dominio donde se hizo el login.
   const senderDomain = hostnameOf(sender.url || '');
   if (senderDomain !== stored.domain) return { pending: null };
+
+  // No ofrecer guardar si ya existe una credencial con ese usuario en el dominio.
+  // Requiere estar desbloqueado para consultar; si está bloqueado, no mostramos el
+  // banner todavía (evita falsos "¿guardar?" sobre credenciales ya guardadas).
+  const token = await getUnlockedToken();
+  if (!token) return { pending: null };
+  try {
+    const match = await api(`/api/extension/credentials/match?domain=${encodeURIComponent(stored.domain)}`, { token });
+    const exists = match.items.some(
+      (i) => (i.username || '').toLowerCase() === stored.username.toLowerCase(),
+    );
+    if (exists) {
+      await chrome.storage.session.remove([key]);
+      return { pending: null };
+    }
+  } catch (_) {
+    return { pending: null };
+  }
+
   return { pending: { domain: stored.domain, username: stored.username } };
 }
 
@@ -232,6 +272,7 @@ function hostnameOf(url) {
 const HANDLERS = {
   STATUS: () => status(),
   LOGIN: (msg) => handleLogin(msg),
+  SET_PIN: (msg) => handleSetPin(msg),
   UNLOCK: (msg) => handleUnlock(msg),
   LOCK: () => handleLock(),
   LOGOUT: () => handleLogout(),

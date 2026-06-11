@@ -1,8 +1,9 @@
-// Lógica del popup: configurar (login + PIN), desbloquear, bloquear, cerrar sesión.
+// Lógica del popup. Flujo en pasos: login (email+pass) → crear PIN (una vez) →
+// desbloqueado. Si ya hay PIN definido y está bloqueado, pide solo el PIN.
 
 const $ = (id) => document.getElementById(id);
 
-const views = ['view-loading', 'view-setup', 'view-locked', 'view-unlocked'];
+const views = ['view-loading', 'view-login', 'view-setpin', 'view-locked', 'view-unlocked'];
 
 function showView(id) {
   views.forEach((v) => { $(v).hidden = v !== id; });
@@ -18,15 +19,28 @@ function send(msg) {
   return chrome.runtime.sendMessage(msg);
 }
 
+function showError(id, message) {
+  const el = $(id);
+  el.textContent = message;
+  el.hidden = false;
+}
+
 let remainingTimer = null;
 
 async function refresh() {
   clearInterval(remainingTimer);
   const st = await send({ type: 'STATUS' });
 
-  if (!st.configured) {
+  if (!st.configured && !st.needsPin) {
     setBadge('sin conectar', '');
-    showView('view-setup');
+    showView('view-login');
+    $('login-email').focus();
+    return;
+  }
+  if (st.needsPin) {
+    setBadge('crear PIN', 'locked');
+    showView('view-setpin');
+    $('setpin-pin').focus();
     return;
   }
   if (!st.unlocked) {
@@ -51,40 +65,53 @@ async function refresh() {
   remainingTimer = setInterval(tick, 1000);
 }
 
-function showError(id, message) {
-  const el = $(id);
-  el.textContent = message;
-  el.hidden = false;
-}
+// ─── Login (paso 1) ──────────────────────────────────────────────────────────
 
-// ─── Setup (primera vez) ─────────────────────────────────────────────────────
+$('login-advanced-toggle').addEventListener('click', () => {
+  const adv = $('login-advanced');
+  adv.hidden = !adv.hidden;
+});
 
-$('setup-submit').addEventListener('click', async () => {
-  $('setup-error').hidden = true;
-  const apiUrl = $('setup-url').value.trim();
-  const email = $('setup-email').value.trim();
-  const password = $('setup-password').value;
-  const pin = $('setup-pin').value.trim();
-  const pin2 = $('setup-pin2').value.trim();
+$('login-submit').addEventListener('click', async () => {
+  $('login-error').hidden = true;
+  const email = $('login-email').value.trim();
+  const password = $('login-password').value;
+  const apiUrl = $('login-url').value.trim();
 
-  if (!apiUrl.startsWith('http')) return showError('setup-error', 'Pon la URL completa de tu Dev Hub (https://…)');
-  if (!email || !password) return showError('setup-error', 'Email y contraseña son obligatorios');
-  if (!/^\d{4,}$/.test(pin)) return showError('setup-error', 'El PIN debe ser numérico, mínimo 4 dígitos');
-  if (pin !== pin2) return showError('setup-error', 'Los PIN no coinciden');
+  if (!email || !password) return showError('login-error', 'Email y contraseña son obligatorios');
 
-  const btn = $('setup-submit');
+  const btn = $('login-submit');
   btn.disabled = true;
-  btn.textContent = 'Conectando…';
+  btn.textContent = 'Entrando…';
   try {
-    const res = await send({ type: 'LOGIN', apiUrl, email, password, pin, deviceName: 'Chrome' });
-    if (!res.ok) throw new Error(res.error || 'No se pudo conectar');
-    $('setup-password').value = '';
-    await refresh();
+    const res = await send({ type: 'LOGIN', email, password, apiUrl, deviceName: 'Chrome' });
+    if (!res.ok) throw new Error(res.error || 'No se pudo iniciar sesión');
+    $('login-password').value = '';
+    await refresh(); // pasará a "crear PIN"
   } catch (err) {
-    showError('setup-error', err.message);
+    showError('login-error', err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Conectar';
+    btn.textContent = 'Iniciar sesión';
+  }
+});
+
+$('login-password').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('login-submit').click(); });
+
+// ─── Crear PIN (paso 2, una sola vez) ────────────────────────────────────────
+
+$('setpin-submit').addEventListener('click', async () => {
+  $('setpin-error').hidden = true;
+  const pin = $('setpin-pin').value.trim();
+  const pin2 = $('setpin-pin2').value.trim();
+  if (!/^\d{4,}$/.test(pin)) return showError('setpin-error', 'El PIN debe ser numérico, mínimo 4 dígitos');
+  if (pin !== pin2) return showError('setpin-error', 'Los PIN no coinciden');
+
+  const res = await send({ type: 'SET_PIN', pin });
+  if (res.ok) {
+    await refresh();
+  } else {
+    showError('setpin-error', res.error || 'No se pudo guardar el PIN');
   }
 });
 
@@ -115,7 +142,7 @@ $('lock-now').addEventListener('click', async () => {
 });
 
 async function logout() {
-  if (!confirm('¿Cerrar sesión? Tendrás que volver a conectar la extensión.')) return;
+  if (!confirm('¿Cerrar sesión? Tendrás que volver a iniciar sesión y crear el PIN.')) return;
   await send({ type: 'LOGOUT' });
   await refresh();
 }

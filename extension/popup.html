@@ -15,35 +15,48 @@
     <p class="muted">Cargando…</p>
   </section>
 
-  <!-- Estado: sin configurar (login + crear PIN) -->
-  <section id="view-setup" class="view" hidden>
-    <p class="muted small">Conecta la extensión con tu Dev Hub. Solo se hace una vez.</p>
-    <label>URL de tu Dev Hub</label>
-    <input id="setup-url" type="url" placeholder="https://tu-app.onrender.com" autocomplete="off" />
+  <!-- Estado: login (email + contraseña) -->
+  <section id="view-login" class="view" hidden>
+    <p class="muted small">Inicia sesión en tu Dev Hub. Solo la primera vez.</p>
     <label>Email</label>
-    <input id="setup-email" type="email" placeholder="tu@email.com" autocomplete="off" />
-    <label>Contraseña de Dev Hub</label>
-    <input id="setup-password" type="password" placeholder="••••••••" />
-    <label>Crea tu PIN de desbloqueo (mín. 4 dígitos)</label>
-    <input id="setup-pin" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="ej. 2026" maxlength="12" />
+    <input id="login-email" type="email" placeholder="tu@email.com" autocomplete="username" />
+    <label>Contraseña</label>
+    <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+    <p id="login-error" class="error" hidden></p>
+    <button id="login-submit" class="btn primary">Iniciar sesión</button>
+
+    <button id="login-advanced-toggle" class="link-btn">Configuración avanzada</button>
+    <div id="login-advanced" hidden>
+      <label>Servidor de Dev Hub</label>
+      <input id="login-url" type="url" placeholder="https://tu-app.onrender.com" autocomplete="off" />
+      <p class="muted tiny">Déjalo vacío para usar el servidor por defecto.</p>
+    </div>
+  </section>
+
+  <!-- Estado: crear PIN (una sola vez, tras login) -->
+  <section id="view-setpin" class="view" hidden>
+    <p class="muted small">Crea un PIN de desbloqueo rápido (numérico, mín. 4 dígitos).</p>
+    <label>PIN</label>
+    <input id="setpin-pin" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="ej. 2026" maxlength="12" />
     <label>Repite el PIN</label>
-    <input id="setup-pin2" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="repite el PIN" maxlength="12" />
-    <p id="setup-error" class="error" hidden></p>
-    <button id="setup-submit" class="btn primary">Conectar</button>
+    <input id="setpin-pin2" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="repite el PIN" maxlength="12" />
+    <p id="setpin-error" class="error" hidden></p>
+    <button id="setpin-submit" class="btn primary">Guardar PIN</button>
     <p class="muted tiny">Tu PIN nunca sale de este navegador: solo cifra el acceso localmente.</p>
   </section>
 
   <!-- Estado: bloqueado (pedir PIN) -->
   <section id="view-locked" class="view" hidden>
-    <p class="muted small">Conectado como <span id="locked-email" class="mono"></span></p>
-    <label>PIN de desbloqueo</label>
+    <p class="muted small">Tu bóveda está bloqueada</p>
+    <p class="mono email-line"><span id="locked-email"></span></p>
+    <label>PIN</label>
     <input id="unlock-pin" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="••••" maxlength="12" autofocus />
     <p id="unlock-error" class="error" hidden></p>
     <button id="unlock-submit" class="btn primary">Desbloquear</button>
     <button id="locked-logout" class="btn ghost">Cerrar sesión</button>
   </section>
 
-  <!-- Estado: desbloqueado -->
+  <!-- Estado: desbloqueado (placeholder; la bóveda se rediseña con la captura) -->
   <section id="view-unlocked" class="view" hidden>
     <p class="muted small">Conectado como <span id="unlocked-email" class="mono"></span></p>
     <div class="status-ok">
