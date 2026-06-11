@@ -1,7 +1,7 @@
-<div class="bg-surface-card border border-surface-border rounded-xl w-full max-w-lg mx-4 shadow-xl overflow-hidden">
+<div class="bg-surface-card border border-surface-border rounded-xl w-full max-w-lg mx-4 shadow-xl overflow-hidden max-h-[90dvh] overflow-y-auto">
   <!-- Header -->
-  <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
-    <h2 class="text-sm font-mono font-semibold text-gray-100">
+  <div class="flex items-center justify-between gap-3 px-6 py-4 border-b border-surface-border min-w-0">
+    <h2 class="text-sm font-mono font-semibold text-gray-100 truncate">
       editar / <span class="text-accent">{{ project.name }}</span>
     </h2>
     <button onclick="document.getElementById('edit-project-modal').classList.add('hidden')"

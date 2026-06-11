@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=1781400000" />
+  <link rel="stylesheet" href="/static/style.css?v=1781600000" />
 
   <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
@@ -19,8 +19,10 @@
 </head>
 
 <body class="bg-surface text-gray-100 min-h-screen antialiased font-sans relative overflow-x-hidden"
-      x-data="{ flash: null }"
-      @show-flash.window="flash = $event.detail; setTimeout(() => flash = null, 3000)">
+      x-data="{ flash: null, sidebarOpen: false }"
+      @show-flash.window="flash = $event.detail; setTimeout(() => flash = null, 3000)"
+      @keydown.escape.window="sidebarOpen = false"
+      :class="sidebarOpen ? 'overflow-hidden' : ''">
 
   <!-- Fondo dinámico con gradientes -->
   <div class="fixed inset-0 pointer-events-none z-[-1]">
@@ -32,14 +34,40 @@
 <div id="htmx-loader" class="htmx-loader" hidden></div>
 
   {% if current_user %}
-  <!-- Sidebar -->
-  <aside class="fixed top-0 left-0 h-screen w-56 bg-surface-card/70 backdrop-blur-md border-r border-surface-border flex flex-col z-40 transition-all duration-300">
+  <!-- Topbar móvil (hamburguesa) -->
+  <header class="lg:hidden fixed top-0 inset-x-0 z-30 flex items-center gap-3 px-4 h-14 bg-surface/80 backdrop-blur-md border-b border-surface-border">
+    <button type="button" @click="sidebarOpen = true" aria-label="Abrir menú"
+            class="p-2 -ml-2 rounded-lg text-gray-400 hover:text-gray-100 hover:bg-surface-card transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+    <a href="/" class="flex items-center gap-2 font-mono font-bold text-accent tracking-tight text-sm hover:opacity-80 transition-opacity">
+      <span class="text-accent opacity-80 font-mono text-base leading-none">▸</span>
+      dev-hub
+    </a>
+  </header>
+
+  <!-- Backdrop del drawer móvil -->
+  <div x-cloak x-show="sidebarOpen" x-transition.opacity.duration.200ms
+       @click="sidebarOpen = false"
+       class="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"></div>
+
+  <!-- Sidebar: fija en desktop, drawer off-canvas en móvil/tablet -->
+  <aside class="app-sidebar fixed top-0 left-0 h-dvh w-56 bg-surface-card/95 lg:bg-surface-card/70 backdrop-blur-md border-r border-surface-border flex flex-col z-50"
+         :class="sidebarOpen ? 'open' : ''">
     <!-- Logo -->
-    <div class="px-5 py-5 border-b border-surface-border/50 bg-gradient-to-b from-surface-card/40 to-transparent">
+    <div class="px-5 py-5 border-b border-surface-border/50 bg-gradient-to-b from-surface-card/40 to-transparent flex items-center justify-between">
       <a href="/" class="flex items-center gap-2 font-mono font-bold text-accent tracking-tight text-sm hover:opacity-80 transition-opacity">
         <span class="text-accent opacity-80 font-mono text-base leading-none animate-pulse">▸</span>
         dev-hub
       </a>
+      <button type="button" @click="sidebarOpen = false" aria-label="Cerrar menú"
+              class="lg:hidden p-1.5 -mr-1 rounded-md text-gray-500 hover:text-gray-200 hover:bg-surface transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
 
     <!-- Nav links -->
@@ -114,7 +142,7 @@
   </div>
 
   <!-- Main content -->
-  <main class="min-h-screen px-8 py-8 {% if current_user %}ml-56{% endif %}">
+  <main class="min-h-screen px-4 sm:px-6 lg:px-8 pb-8 {% if current_user %}pt-20 lg:pt-8 lg:ml-56{% else %}pt-8{% endif %}">
     {% block content %}{% endblock %}
   </main>
 
