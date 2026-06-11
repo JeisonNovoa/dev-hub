@@ -56,15 +56,61 @@
     <button id="locked-logout" class="btn ghost">Cerrar sesión</button>
   </section>
 
-  <!-- Estado: desbloqueado (placeholder; la bóveda se rediseña con la captura) -->
-  <section id="view-unlocked" class="view" hidden>
-    <p class="muted small">Conectado como <span id="unlocked-email" class="mono"></span></p>
-    <div class="status-ok">
-      <span class="dot"></span> Desbloqueado — <span id="unlock-remaining" class="mono"></span>
+  <!-- Estado: desbloqueado — la bóveda -->
+  <section id="view-unlocked" class="view vault" hidden>
+    <!-- Barra de acciones -->
+    <div class="vault-top">
+      <input id="vault-search" type="search" placeholder="Buscar…" class="vault-search" />
+      <button id="vault-new" class="icon-btn" title="Nueva credencial">+</button>
     </div>
-    <p class="muted tiny">El ícono de Dev Hub aparece en los campos de contraseña. Haz clic para autocompletar.</p>
-    <button id="lock-now" class="btn">Bloquear ahora</button>
-    <button id="unlocked-logout" class="btn ghost">Cerrar sesión</button>
+
+    <!-- Sección: este sitio (pestaña actual) -->
+    <div id="vault-site" hidden>
+      <p class="vault-section-title">Este sitio · <span id="vault-site-domain" class="mono"></span></p>
+      <div id="vault-site-list"></div>
+    </div>
+
+    <!-- Lista completa -->
+    <p class="vault-section-title">Todos los elementos <span id="vault-count" class="muted"></span></p>
+    <div id="vault-list" class="vault-list"></div>
+    <p id="vault-empty" class="muted small" hidden>Sin credenciales guardadas aún.</p>
+
+    <!-- Pie -->
+    <div class="vault-footer">
+      <span class="status-ok-inline"><span class="dot"></span> <span id="unlock-remaining" class="mono"></span></span>
+      <span class="vault-footer-actions">
+        <button id="lock-now" class="link-btn">Bloquear</button>
+        <button id="unlocked-logout" class="link-btn danger">Cerrar sesión</button>
+      </span>
+    </div>
+  </section>
+
+  <!-- Vista: formulario de credencial (nueva o editar) -->
+  <section id="view-form" class="view" hidden>
+    <div class="form-head">
+      <button id="form-back" class="link-btn">← volver</button>
+      <span id="form-title" class="form-title">Nueva credencial</span>
+    </div>
+    <input type="hidden" id="form-id" />
+    <label>Nombre / etiqueta</label>
+    <input id="form-label" type="text" placeholder="ej. Cartesia" />
+    <label>URL</label>
+    <input id="form-url" type="url" placeholder="https://…" />
+    <label>Usuario / email</label>
+    <input id="form-username" type="text" autocomplete="off" />
+    <label>Contraseña</label>
+    <div class="pwd-row">
+      <input id="form-password" type="password" autocomplete="new-password" />
+      <button id="form-pwd-toggle" type="button" class="icon-btn" title="Mostrar/ocultar">👁</button>
+    </div>
+    <label>Categoría</label>
+    <select id="form-category">
+      <option value="personal">personal</option>
+      <option value="work">trabajo</option>
+      <option value="project">proyecto</option>
+    </select>
+    <p id="form-error" class="error" hidden></p>
+    <button id="form-submit" class="btn primary">Guardar</button>
   </section>
 
   <script src="popup.js"></script>

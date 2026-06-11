@@ -302,6 +302,12 @@
     saveBtn.className = `${PREFIX}-btn`;
     saveBtn.textContent = 'Guardar';
 
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = `${PREFIX}-btn ${PREFIX}-btn-ghost`;
+    editBtn.textContent = 'Editar';
+    editBtn.title = 'Editar antes de guardar (nombre, categoría…)';
+
     const noBtn = document.createElement('button');
     noBtn.type = 'button';
     noBtn.className = `${PREFIX}-btn ${PREFIX}-btn-ghost`;
@@ -350,12 +356,23 @@
     });
 
     saveBtn.addEventListener('click', doSave);
+
+    editBtn.addEventListener('click', async () => {
+      const res = await send({ type: 'DRAFT_FROM_PENDING' });
+      if (res.ok) {
+        text.textContent = 'Abre la extensión de Dev Hub (arriba a la derecha) para editar y guardar.';
+        actions.remove();
+        pinInput.remove();
+        setTimeout(() => banner.remove(), 6000);
+      }
+    });
+
     noBtn.addEventListener('click', async () => {
       await send({ type: 'DISMISS_PENDING' });
       banner.remove();
     });
 
-    actions.append(saveBtn, noBtn);
+    actions.append(saveBtn, editBtn, noBtn);
     banner.append(text, pinInput, actions);
     document.body.appendChild(banner);
   }

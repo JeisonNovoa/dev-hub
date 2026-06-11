@@ -3,7 +3,7 @@
 
 const $ = (id) => document.getElementById(id);
 
-const views = ['view-loading', 'view-login', 'view-setpin', 'view-locked', 'view-unlocked'];
+const views = ['view-loading', 'view-login', 'view-setpin', 'view-locked', 'view-unlocked', 'view-form'];
 
 function showView(id) {
   views.forEach((v) => { $(v).hidden = v !== id; });
@@ -52,18 +52,259 @@ async function refresh() {
     return;
   }
   setBadge('activo', 'ok');
-  $('unlocked-email').textContent = st.email || '';
   showView('view-unlocked');
   const tick = () => {
     const ms = st.unlockedUntil - Date.now();
     if (ms <= 0) { refresh(); return; }
     const m = Math.floor(ms / 60000);
     const s = Math.floor((ms % 60000) / 1000);
-    $('unlock-remaining').textContent = `${m}:${String(s).padStart(2, '0')} restantes`;
+    $('unlock-remaining').textContent = `${m}:${String(s).padStart(2, '0')}`;
   };
   tick();
   remainingTimer = setInterval(tick, 1000);
+  loadVault();
 }
+
+// ─── Bóveda ──────────────────────────────────────────────────────────────────
+
+let allCreds = [];
+let activeDomain = null;
+
+function buildFavicon(cred) {
+  const fav = document.createElement('span');
+  fav.className = 'cred-favicon';
+  const letter = (cred.label || '?')[0].toUpperCase();
+  if (cred.domain) {
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${cred.domain}&size=32`;
+    img.addEventListener('error', () => { fav.textContent = letter; });
+    fav.appendChild(img);
+  } else {
+    fav.textContent = letter;
+  }
+  return fav;
+}
+
+function closeMenus() {
+  document.querySelectorAll('.cred-menu').forEach((m) => m.remove());
+}
+
+function openMenu(anchor, options) {
+  closeMenus();
+  const menu = document.createElement('div');
+  menu.className = 'cred-menu';
+  options.forEach((opt) => {
+    const b = document.createElement('button');
+    b.textContent = opt.label;
+    if (opt.danger) b.className = 'danger';
+    b.addEventListener('click', (e) => { e.stopPropagation(); closeMenus(); opt.onClick(); });
+    menu.appendChild(b);
+  });
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = `${Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8)}px`;
+  menu.style.left = `${Math.max(8, r.right - menu.offsetWidth)}px`;
+  setTimeout(() => document.addEventListener('click', closeMenus, { once: true }), 0);
+}
+
+async function copyField(credId, field, btn) {
+  const res = await send({ type: 'COPY_SECRET', credId, field });
+  if (!res.ok) return;
+  await navigator.clipboard.writeText(res.value || '');
+  btn.classList.add('copied');
+  setTimeout(() => btn.classList.remove('copied'), 1500);
+}
+
+function credRow(cred, { showFill = false } = {}) {
+  const row = document.createElement('div');
+  row.className = 'cred-row';
+
+  const fav = buildFavicon(cred);
+
+  const info = document.createElement('div');
+  info.className = 'cred-info';
+  const name = document.createElement('div');
+  name.className = 'cred-name';
+  name.textContent = cred.label;
+  const user = document.createElement('div');
+  user.className = 'cred-user';
+  user.textContent = cred.username || '—';
+  info.append(name, user);
+
+  const actions = document.createElement('div');
+  actions.className = 'cred-actions';
+
+  if (showFill) {
+    const fill = document.createElement('button');
+    fill.className = 'cred-action cred-fill';
+    fill.textContent = 'rellenar';
+    fill.title = 'Rellenar esta página';
+    fill.addEventListener('click', async () => {
+      const res = await send({ type: 'FILL_ACTIVE_TAB', credId: cred.id });
+      if (res.ok) window.close();
+    });
+    actions.appendChild(fill);
+  }
+
+  if (cred.url) {
+    const open = document.createElement('button');
+    open.className = 'cred-action';
+    open.title = 'Abrir sitio';
+    open.textContent = '↗';
+    open.addEventListener('click', () => chrome.tabs.create({ url: cred.url }));
+    actions.appendChild(open);
+  }
+
+  const copy = document.createElement('button');
+  copy.className = 'cred-action';
+  copy.title = 'Copiar';
+  copy.textContent = '⧉';
+  copy.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openMenu(copy, [
+      { label: 'Copiar usuario', onClick: () => copyField(cred.id, 'username', copy) },
+      { label: 'Copiar contraseña', onClick: () => copyField(cred.id, 'password', copy) },
+    ]);
+  });
+  actions.appendChild(copy);
+
+  const more = document.createElement('button');
+  more.className = 'cred-action';
+  more.title = 'Más';
+  more.textContent = '⋮';
+  more.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openMenu(more, [
+      { label: 'Autocompletar esta página', onClick: async () => { const r = await send({ type: 'FILL_ACTIVE_TAB', credId: cred.id }); if (r.ok) window.close(); } },
+      { label: 'Editar', onClick: () => openForm(cred) },
+      { label: 'Eliminar', danger: true, onClick: () => deleteCred(cred) },
+    ]);
+  });
+  actions.appendChild(more);
+
+  row.append(fav, info, actions);
+  return row;
+}
+
+function renderVault(filter = '') {
+  const q = filter.trim().toLowerCase();
+  const list = $('vault-list');
+  list.innerHTML = '';
+
+  const filtered = q
+    ? allCreds.filter((c) => (c.label || '').toLowerCase().includes(q) || (c.username || '').toLowerCase().includes(q))
+    : allCreds;
+
+  $('vault-count').textContent = filtered.length ? `(${filtered.length})` : '';
+  $('vault-empty').hidden = filtered.length > 0;
+  filtered.forEach((c) => list.appendChild(credRow(c)));
+
+  // Sección "este sitio"
+  const siteBox = $('vault-site');
+  if (activeDomain) {
+    const matches = allCreds.filter(
+      (c) => c.domain && (c.domain === activeDomain || activeDomain.endsWith('.' + c.domain)),
+    );
+    if (matches.length) {
+      $('vault-site-domain').textContent = activeDomain;
+      const siteList = $('vault-site-list');
+      siteList.innerHTML = '';
+      matches.forEach((c) => siteList.appendChild(credRow(c, { showFill: true })));
+      siteBox.hidden = false;
+    } else {
+      siteBox.hidden = true;
+    }
+  } else {
+    siteBox.hidden = true;
+  }
+}
+
+async function loadVault() {
+  const [vault, tab] = await Promise.all([
+    send({ type: 'VAULT_LIST' }),
+    send({ type: 'ACTIVE_TAB' }),
+  ]);
+  if (!vault.ok) { if (vault.locked) refresh(); return; }
+  allCreds = vault.items;
+  activeDomain = tab.domain || null;
+  renderVault($('vault-search').value);
+
+  // Si el banner dejó un borrador ("Editar antes de guardar"), abrir el formulario.
+  const { draft } = await send({ type: 'GET_DRAFT' });
+  if (draft) {
+    await send({ type: 'CLEAR_DRAFT' });
+    openForm(null, draft);
+  }
+}
+
+async function deleteCred(cred) {
+  if (!confirm(`¿Mover "${cred.label}" a la papelera?`)) return;
+  const res = await send({ type: 'DELETE_CREDENTIAL', credId: cred.id });
+  if (res.ok) loadVault();
+}
+
+$('vault-search').addEventListener('input', (e) => renderVault(e.target.value));
+$('vault-new').addEventListener('click', () => openForm(null));
+
+// ─── Formulario (nueva / editar) ─────────────────────────────────────────────
+
+// cred: credencial existente a editar (o null para nueva).
+// draft: datos prellenados (del banner "editar antes de guardar"), opcional.
+function openForm(cred, draft = null) {
+  $('form-id').value = cred?.id || '';
+  $('form-title').textContent = cred ? 'Editar credencial' : 'Nueva credencial';
+  $('form-label').value = cred?.label || draft?.label || (activeDomain || '');
+  $('form-url').value = cred?.url || draft?.url || (activeDomain ? `https://${activeDomain}` : '');
+  $('form-username').value = cred?.username || draft?.username || '';
+  $('form-password').value = draft?.password || '';
+  $('form-password').placeholder = cred ? '(sin cambios)' : '';
+  $('form-category').value = cred?.category || 'personal';
+  $('form-error').hidden = true;
+  showView('view-form');
+  $('form-label').focus();
+}
+
+$('form-back').addEventListener('click', () => { showView('view-unlocked'); loadVault(); });
+$('form-pwd-toggle').addEventListener('click', () => {
+  const i = $('form-password');
+  i.type = i.type === 'password' ? 'text' : 'password';
+});
+
+$('form-submit').addEventListener('click', async () => {
+  $('form-error').hidden = true;
+  const id = $('form-id').value;
+  const label = $('form-label').value.trim();
+  if (!label) { $('form-error').textContent = 'El nombre es obligatorio'; $('form-error').hidden = false; return; }
+
+  const fields = {
+    label,
+    url: $('form-url').value.trim(),
+    username: $('form-username').value.trim(),
+    category: $('form-category').value,
+  };
+  const pwd = $('form-password').value;
+  // Al editar, solo cambia la contraseña si se escribió algo.
+  if (pwd || !id) fields.password = pwd;
+
+  const btn = $('form-submit');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  try {
+    const res = id
+      ? await send({ type: 'UPDATE_CREDENTIAL', credId: Number(id), fields })
+      : await send({ type: 'CREATE_CREDENTIAL', fields });
+    if (!res.ok) throw new Error(res.error || 'No se pudo guardar');
+    showView('view-unlocked');
+    await loadVault();
+  } catch (err) {
+    $('form-error').textContent = err.message;
+    $('form-error').hidden = false;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar';
+  }
+});
 
 // ─── Login (paso 1) ──────────────────────────────────────────────────────────
 

@@ -151,6 +151,45 @@ def test_create_credential_from_extension(client, ext_token, auth_user, db):
     assert cred.password == "clave-nueva"  # descifrado transparente
 
 
+# ─── Bóveda completa, editar y eliminar ──────────────────────────────────────
+
+def test_list_vault(client, ext_token):
+    _create_credential(client, "Cartesia", "https://cartesia.ai")
+    _create_credential(client, "GitHub", "https://github.com")
+    res = client.get("/api/extension/credentials", headers=_bearer(ext_token))
+    assert res.status_code == 200
+    items = res.json()["items"]
+    assert len(items) == 2
+    # Incluye dominio para el favicon, nunca la contraseña
+    assert {i["domain"] for i in items} == {"cartesia.ai", "github.com"}
+    assert all("password" not in i for i in items)
+
+
+def test_update_credential_from_extension(client, ext_token):
+    cred_id = _create_credential(client, "Viejo", "https://x.com")
+    res = client.patch(
+        f"/api/extension/credentials/{cred_id}",
+        json={"label": "Nuevo", "category": "work"},
+        headers=_bearer(ext_token),
+    )
+    assert res.status_code == 200
+    detail = client.get(f"/api/credentials/{cred_id}").json()
+    assert detail["label"] == "Nuevo"
+    assert detail["category"] == "work"
+
+
+def test_delete_credential_from_extension(client, ext_token):
+    cred_id = _create_credential(client, "Borrar", "https://x.com")
+    assert client.delete(f"/api/extension/credentials/{cred_id}", headers=_bearer(ext_token)).status_code == 204
+    # Ya no aparece en la bóveda
+    items = client.get("/api/extension/credentials", headers=_bearer(ext_token)).json()["items"]
+    assert all(i["id"] != cred_id for i in items)
+
+
+def test_vault_requires_token(client):
+    assert client.get("/api/extension/credentials").status_code == 401
+
+
 # ─── Gestión de tokens desde la web (cookie) ─────────────────────────────────
 
 def test_list_and_revoke_tokens_via_web(client, ext_token):

@@ -29,15 +29,25 @@ Funciona en Chrome, Edge y Brave. **Costo: $0** (se usa en modo desarrollador).
 
 ## Cómo se usa
 
-- **Autocompletar**: en cualquier página de login aparece un ícono `▸` dentro del
-  campo de contraseña. Haz clic → si está bloqueado te pide el PIN → muestra tus
-  cuentas guardadas para ese dominio (si hay varias, eliges cuál) → rellena.
+- **Autocompletar desde el formulario**: en cualquier página de login aparece un
+  ícono `▸` dentro del campo de contraseña. Haz clic → si está bloqueado te pide
+  el PIN → muestra tus cuentas guardadas para ese dominio (si hay varias, eliges
+  cuál) → rellena.
+- **La bóveda (popup)**: clic en el ícono de la extensión → desbloqueas con el PIN
+  → ves todas tus credenciales con buscador. Si estás en una página con login
+  conocido, esa credencial sale arriba en "Este sitio" con botón **rellenar**.
+  Por cada credencial: abrir el sitio (↗), **copiar** (usuario o contraseña) y el
+  menú **⋮** (autocompletar la página, editar, eliminar).
+- **Nueva credencial**: botón **+** en la bóveda → formulario con nombre, URL,
+  usuario, contraseña y categoría.
 - **Desbloqueo temporal**: tras poner el PIN queda desbloqueado **5 minutos**
   (cada uso renueva el tiempo). Después vuelve a pedir el PIN.
 - **Guardar un login nuevo**: inicia sesión normal en un sitio. En la página
-  siguiente aparece un aviso "¿Guardar … en Dev Hub?" → **Guardar** (te pedirá el
-  PIN si está bloqueado). La credencial queda en tu bóveda con el dominio.
-- **Bloquear/cerrar sesión**: desde el popup de la extensión.
+  siguiente aparece un aviso "¿Guardar … en Dev Hub?" con tres opciones:
+  **Guardar** (rápido), **Editar** (abre la extensión con el formulario
+  prellenado para ajustar nombre/categoría antes de guardar) o **No**. Si la
+  credencial ya existe en ese dominio, el aviso no aparece.
+- **Bloquear/cerrar sesión**: desde el pie de la bóveda en el popup.
 
 ## Seguridad (cómo está diseñada)
 

@@ -267,6 +267,136 @@ function hostnameOf(url) {
   }
 }
 
+// ─── Bóveda en el popup ──────────────────────────────────────────────────────
+
+async function handleVaultList() {
+  const token = await getUnlockedToken();
+  if (!token) return { ok: false, locked: true };
+  const data = await api('/api/extension/credentials', { token });
+  await renewUnlock();
+  return { ok: true, items: data.items };
+}
+
+async function handleCopySecret({ credId, field }) {
+  // Devuelve el valor para que el POPUP lo copie (clipboard funciona en el popup,
+  // no en el service worker). El secreto nunca toca una página web aquí.
+  const token = await getUnlockedToken();
+  if (!token) return { ok: false, locked: true };
+  const data = await api(`/api/extension/credentials/${credId}/secret`, { token });
+  await renewUnlock();
+  return { ok: true, value: field === 'username' ? data.username : data.password };
+}
+
+async function handleDeleteCredential({ credId }) {
+  const token = await getUnlockedToken();
+  if (!token) return { ok: false, locked: true };
+  await api(`/api/extension/credentials/${credId}`, { method: 'DELETE', token });
+  await renewUnlock();
+  return { ok: true };
+}
+
+async function handleUpdateCredential({ credId, fields }) {
+  const token = await getUnlockedToken();
+  if (!token) return { ok: false, locked: true };
+  await api(`/api/extension/credentials/${credId}`, { method: 'PATCH', token, body: fields });
+  await renewUnlock();
+  return { ok: true };
+}
+
+async function handleCreateCredential({ fields }) {
+  const token = await getUnlockedToken();
+  if (!token) return { ok: false, locked: true };
+  const data = await api('/api/extension/credentials', { method: 'POST', token, body: fields });
+  await renewUnlock();
+  return { ok: true, id: data.id };
+}
+
+// Borrador de credencial pendiente (desde "Editar antes de guardar" del banner).
+// Lo consume el popup al abrirse para prellenar el formulario.
+async function handleGetDraft() {
+  const { draft } = await getSession(['draft']);
+  if (!draft || Date.now() - draft.at > PENDING_SAVE_TTL_MS) {
+    if (draft) await chrome.storage.session.remove(['draft']);
+    return { draft: null };
+  }
+  return { draft };
+}
+
+async function handleSetDraft({ draft }) {
+  await chrome.storage.session.set({ draft: { ...draft, at: Date.now() } });
+  return { ok: true };
+}
+
+// Convierte el "pending" de una pestaña (con su contraseña) en un borrador editable
+// que el popup abrirá en el formulario. Lo usa el botón "Editar" del banner.
+async function handleDraftFromPending(_msg, sender) {
+  const tabId = sender.tab?.id;
+  if (tabId == null) return { ok: false };
+  const key = `pending_${tabId}`;
+  const stored = (await getSession([key]))[key];
+  if (!stored) return { ok: false };
+  await chrome.storage.session.set({
+    draft: {
+      label: stored.domain,
+      url: `https://${stored.domain}`,
+      username: stored.username,
+      password: stored.password,
+      at: Date.now(),
+    },
+  });
+  await chrome.storage.session.remove([key]);
+  return { ok: true };
+}
+
+async function handleClearDraft() {
+  await chrome.storage.session.remove(['draft']);
+  return { ok: true };
+}
+
+// Dominio de la pestaña activa, para la sección "este sitio" del popup.
+async function handleActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.url || !/^https?:/.test(tab.url)) {
+    return { domain: null, tabId: null };
+  }
+  return { domain: hostnameOf(tab.url), tabId: tab.id, url: tab.url };
+}
+
+// Rellena el formulario de la pestaña activa con una credencial (botón del popup).
+async function handleFillActiveTab({ credId }) {
+  const token = await getUnlockedToken();
+  if (!token) return { ok: false, locked: true };
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id) return { ok: false, error: 'No hay pestaña activa' };
+
+  const data = await api(`/api/extension/credentials/${credId}/secret`, { token });
+  await renewUnlock();
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    args: [data.username || '', data.password || ''],
+    func: (username, password) => {
+      const setNativeValue = (input, value) => {
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+        setter.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      const pwd = document.querySelector('input[type="password"]');
+      if (pwd && password) setNativeValue(pwd, password);
+      // Campo de usuario: el input de texto/email visible más cercano antes del password.
+      const scope = pwd?.form || document;
+      const userInputs = Array.from(
+        scope.querySelectorAll('input[type="email"], input[type="text"], input:not([type])'),
+      ).filter((el) => el.offsetParent !== null);
+      const userInput = userInputs[userInputs.length - 1];
+      if (userInput && username) setNativeValue(userInput, username);
+    },
+  });
+  return { ok: true };
+}
+
 // ─── Router de mensajes ──────────────────────────────────────────────────────
 
 const HANDLERS = {
@@ -282,6 +412,17 @@ const HANDLERS = {
   GET_PENDING_SAVE: (msg, sender) => handleGetPendingSave(msg, sender),
   DISMISS_PENDING: (msg, sender) => handleDismissPending(msg, sender),
   SAVE_PENDING: (msg, sender) => handleSavePending(msg, sender),
+  VAULT_LIST: () => handleVaultList(),
+  COPY_SECRET: (msg) => handleCopySecret(msg),
+  DELETE_CREDENTIAL: (msg) => handleDeleteCredential(msg),
+  UPDATE_CREDENTIAL: (msg) => handleUpdateCredential(msg),
+  CREATE_CREDENTIAL: (msg) => handleCreateCredential(msg),
+  ACTIVE_TAB: () => handleActiveTab(),
+  FILL_ACTIVE_TAB: (msg) => handleFillActiveTab(msg),
+  GET_DRAFT: () => handleGetDraft(),
+  SET_DRAFT: (msg) => handleSetDraft(msg),
+  CLEAR_DRAFT: () => handleClearDraft(),
+  DRAFT_FROM_PENDING: (msg, sender) => handleDraftFromPending(msg, sender),
 };
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

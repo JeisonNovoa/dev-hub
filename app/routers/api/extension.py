@@ -36,6 +36,16 @@ class ExtensionCredentialCreate(BaseModel):
     username: str | None = None
     password: str | None = None
     url: str
+    category: str = "personal"
+    notes: str | None = None
+
+
+class ExtensionCredentialUpdate(BaseModel):
+    label: str | None = Field(default=None, max_length=255)
+    username: str | None = None
+    password: str | None = None
+    url: str | None = None
+    category: str | None = None
     notes: str | None = None
 
 
@@ -89,6 +99,34 @@ def extension_logout(
 
 
 # --- Credenciales para autofill ---
+
+@router.get("/credentials")
+def list_vault(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_user_from_extension_token),
+) -> dict:
+    """Toda la bóveda para poblar el popup. Sin contraseñas (se piden por /secret)."""
+    creds = (
+        db.query(Credential)
+        .filter(Credential.user_id == current_user.id, Credential.deleted_at.is_(None))
+        .order_by(Credential.label)
+        .all()
+    )
+    return {
+        "items": [
+            {
+                "id": c.id,
+                "label": c.label,
+                "username": c.username,
+                "url": c.url,
+                "domain": extract_domain(c.url),
+                "category": c.category,
+                "login_via": c.login_via,
+            }
+            for c in creds
+        ]
+    }
+
 
 @router.get("/credentials/match")
 def match_credentials(
@@ -156,7 +194,7 @@ def create_credential_from_extension(
         username=data.username or None,
         password=data.password or None,
         url=url,
-        category="personal",
+        category=data.category or "personal",
         login_via="email",
         notes=data.notes or None,
     )
@@ -165,6 +203,50 @@ def create_credential_from_extension(
     db.refresh(cred)
     logger.info("Credencial creada vía extensión: '%s' (id=%d)", cred.label, cred.id)
     return {"id": cred.id, "label": cred.label}
+
+
+def _get_owned_credential(cred_id: int, user_id: int, db: Session) -> Credential:
+    cred = (
+        db.query(Credential)
+        .filter(Credential.id == cred_id, Credential.user_id == user_id, Credential.deleted_at.is_(None))
+        .first()
+    )
+    if not cred:
+        raise HTTPException(status_code=404, detail="Credencial no encontrada")
+    return cred
+
+
+@router.patch("/credentials/{cred_id}")
+def update_credential_from_extension(
+    cred_id: int,
+    data: ExtensionCredentialUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_user_from_extension_token),
+) -> dict:
+    cred = _get_owned_credential(cred_id, current_user.id, db)
+    fields = data.model_dump(exclude_unset=True)
+    if "url" in fields and fields["url"]:
+        url = fields["url"].strip()
+        fields["url"] = url if url.startswith(("http://", "https://")) else "https://" + url
+    for field, value in fields.items():
+        setattr(cred, field, value if value != "" else None)
+    db.commit()
+    db.refresh(cred)
+    logger.info("Credencial editada vía extensión: id=%d user=%d", cred.id, current_user.id)
+    return {"id": cred.id, "label": cred.label}
+
+
+@router.delete("/credentials/{cred_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_credential_from_extension(
+    cred_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_user_from_extension_token),
+) -> None:
+    from datetime import datetime, timezone
+    cred = _get_owned_credential(cred_id, current_user.id, db)
+    cred.deleted_at = datetime.now(timezone.utc)
+    db.commit()
+    logger.info("Credencial movida a papelera vía extensión: id=%d user=%d", cred.id, current_user.id)
 
 
 # --- Gestión de tokens desde la web (cookie de sesión, no token) ---
