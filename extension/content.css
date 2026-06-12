@@ -1,5 +1,6 @@
 /* Estilos del UI inyectado por Dev Hub. Prefijo devhub-ext- y !important en lo
-   crítico para resistir el CSS de cualquier página. */
+   crítico para resistir el CSS de cualquier página. Paleta alineada con el
+   dashboard: fondo #0a0a0f, acento esmeralda #10b981. */
 
 .devhub-ext-icon {
   position: absolute !important;
@@ -9,36 +10,44 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: #161922 !important;
-  color: #22c55e !important;
-  border: 1px solid #2a2d3e !important;
+  background: #14161f !important;
+  color: #10b981 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
   border-radius: 5px !important;
   font: 700 11px/1 Consolas, monospace !important;
   cursor: pointer !important;
   padding: 0 !important;
   margin: 0 !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4) !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
 }
 
 .devhub-ext-icon:hover {
-  border-color: #22c55e !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35) !important;
 }
 
 .devhub-ext-panel {
   position: absolute !important;
   z-index: 2147483647 !important;
   width: 260px !important;
-  background: #0f1117 !important;
-  border: 1px solid #2a2d3e !important;
-  border-radius: 10px !important;
+  background: #0d0f16 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
   padding: 10px !important;
   font-family: 'Segoe UI', system-ui, sans-serif !important;
   font-size: 13px !important;
-  color: #e5e7eb !important;
+  color: #f3f4f6 !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
+  animation: devhub-ext-pop 0.14s ease-out !important;
+}
+
+@keyframes devhub-ext-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .devhub-ext-msg {
@@ -59,39 +68,64 @@
 
 .devhub-ext-pin {
   width: 100% !important;
-  background: #161922 !important;
-  border: 1px solid #2a2d3e !important;
+  background: #14161f !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 7px !important;
   padding: 7px 9px !important;
-  color: #e5e7eb !important;
+  color: #f3f4f6 !important;
   font-size: 14px !important;
+  letter-spacing: 0.3em !important;
+  text-align: center !important;
   outline: none !important;
   box-sizing: border-box !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
 }
 
 .devhub-ext-pin:focus {
-  border-color: rgba(34, 197, 94, 0.5) !important;
+  border-color: rgba(16, 185, 129, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12) !important;
+}
+
+.devhub-ext-shake {
+  animation: devhub-ext-shake 0.35s ease-in-out !important;
+}
+
+@keyframes devhub-ext-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
 }
 
 .devhub-ext-btn {
-  background: #22c55e !important;
-  color: #06130a !important;
+  background: #10b981 !important;
+  color: #04120c !important;
   border: none !important;
   border-radius: 7px !important;
   padding: 7px 12px !important;
   font-size: 13px !important;
   font-weight: 600 !important;
   cursor: pointer !important;
+  transition: background 0.15s, box-shadow 0.15s !important;
 }
 
 .devhub-ext-btn:hover {
-  background: #16a34a !important;
+  background: #059669 !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.3) !important;
 }
 
 .devhub-ext-btn-ghost {
   background: transparent !important;
   color: #9ca3af !important;
-  border: 1px solid #2a2d3e !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+}
+
+.devhub-ext-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #f3f4f6 !important;
+  box-shadow: none !important;
 }
 
 .devhub-ext-account {
@@ -100,22 +134,24 @@
   align-items: flex-start !important;
   gap: 2px !important;
   width: 100% !important;
-  background: #161922 !important;
-  border: 1px solid #2a2d3e !important;
+  background: #14161f !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 8px !important;
   padding: 8px 10px !important;
   cursor: pointer !important;
   text-align: left !important;
+  transition: border-color 0.15s, background 0.15s !important;
 }
 
 .devhub-ext-account:hover {
-  border-color: rgba(34, 197, 94, 0.45) !important;
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  background: #181b26 !important;
 }
 
 .devhub-ext-account-label {
   font-size: 13px !important;
   font-weight: 600 !important;
-  color: #e5e7eb !important;
+  color: #f3f4f6 !important;
   max-width: 100% !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -146,17 +182,18 @@
 /* Acceso OAuth: informativo, sin interacción */
 .devhub-ext-account-oauth {
   cursor: default !important;
-  background: rgba(22, 25, 34, 0.6) !important;
+  background: rgba(20, 22, 31, 0.6) !important;
   border-style: dashed !important;
 }
 
 .devhub-ext-account-oauth:hover {
-  border-color: #2a2d3e !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(20, 22, 31, 0.6) !important;
 }
 
 .devhub-ext-account-hint {
   font-size: 11px !important;
-  color: #22c55e !important;
+  color: #10b981 !important;
   max-width: 100% !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -173,14 +210,20 @@
   align-items: center !important;
   gap: 10px !important;
   max-width: min(560px, calc(100vw - 24px)) !important;
-  background: #0f1117 !important;
-  border: 1px solid rgba(34, 197, 94, 0.35) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
+  background: #0d0f16 !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(16, 185, 129, 0.08) !important;
   padding: 10px 14px !important;
   font-family: 'Segoe UI', system-ui, sans-serif !important;
   font-size: 13px !important;
-  color: #e5e7eb !important;
+  color: #f3f4f6 !important;
+  animation: devhub-ext-drop 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes devhub-ext-drop {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .devhub-ext-banner-text {

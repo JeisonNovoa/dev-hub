@@ -119,7 +119,10 @@
     p.appendChild(msg);
   }
 
-  function renderPinPrompt(p, onUnlocked) {
+  // pinLength: cantidad de dígitos del PIN (solo la longitud, nunca el PIN).
+  // Si se conoce, el desbloqueo es automático al escribir el último dígito y no
+  // hace falta botón; si no, queda el botón clásico como respaldo.
+  function renderPinPrompt(p, pinLength, onUnlocked) {
     p.innerHTML = '';
     const label = document.createElement('p');
     label.className = `${PREFIX}-msg`;
@@ -129,34 +132,48 @@
     input.type = 'password';
     input.inputMode = 'numeric';
     input.className = `${PREFIX}-pin`;
-    input.placeholder = '••••';
-    input.maxLength = 12;
+    input.placeholder = pinLength ? '•'.repeat(pinLength) : '••••';
+    input.maxLength = pinLength || 12;
 
     const error = document.createElement('p');
     error.className = `${PREFIX}-error`;
 
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = `${PREFIX}-btn`;
-    btn.textContent = 'Desbloquear';
-
+    let busy = false;
     const tryUnlock = async () => {
+      if (busy) return;
       const pin = input.value.trim();
       if (!pin) return;
+      busy = true;
       const res = await send({ type: 'UNLOCK', pin });
       if (res.ok) {
         onUnlocked();
-      } else {
-        error.textContent = res.error || 'PIN incorrecto';
-        input.value = '';
-        if (res.wiped) setTimeout(closePanel, 2500);
+        return;
       }
+      busy = false;
+      error.textContent = res.error || 'PIN incorrecto';
+      input.value = '';
+      input.classList.remove(`${PREFIX}-shake`);
+      void input.offsetWidth; // reinicia la animación
+      input.classList.add(`${PREFIX}-shake`);
+      if (res.wiped) setTimeout(closePanel, 2500);
+      else input.focus();
     };
 
-    btn.addEventListener('click', tryUnlock);
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/\D/g, '').slice(0, pinLength || 12);
+      if (pinLength && input.value.length === pinLength) tryUnlock();
+    });
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tryUnlock(); } });
 
-    p.append(label, input, error, btn);
+    p.append(label, input, error);
+    if (!pinLength) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `${PREFIX}-btn`;
+      btn.textContent = 'Desbloquear';
+      btn.addEventListener('click', tryUnlock);
+      p.appendChild(btn);
+    }
     input.focus();
   }
 
@@ -236,7 +253,7 @@
       renderMessage(p, 'Buscando credenciales…');
       const res = await send({ type: 'MATCH', domain: pageDomain() });
       if (res.locked) {
-        renderPinPrompt(p, loadAccounts);
+        renderPinPrompt(p, st.pinLength, loadAccounts);
         return;
       }
       if (!res.ok) {
@@ -251,7 +268,7 @@
     };
 
     if (!st.unlocked) {
-      renderPinPrompt(p, loadAccounts);
+      renderPinPrompt(p, st.pinLength, loadAccounts);
     } else {
       await loadAccounts();
     }

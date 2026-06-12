@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Dev Hub — Autofill",
   "description": "Autocompleta credenciales guardadas en tu Dev Hub personal. Detecta logins y ofrece guardarlos.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "permissions": ["storage", "tabs", "scripting", "clipboardWrite"],
   "host_permissions": [
     "http://localhost:8000/*",

@@ -42,7 +42,9 @@ async function renewUnlock() {
 }
 
 async function status() {
-  const { email, encToken } = await getLocal(['email', 'encToken']);
+  const { email, encToken, pinLength, pinAttempts = 0 } = await getLocal([
+    'email', 'encToken', 'pinLength', 'pinAttempts',
+  ]);
   const token = await getUnlockedToken();
   const { unlockedUntil } = await getSession(['unlockedUntil']);
   return {
@@ -52,6 +54,10 @@ async function status() {
     email: email || null,
     apiUrl: await resolveApiUrl(),
     unlockedUntil: token ? unlockedUntil : null,
+    // Solo la CANTIDAD de dígitos del PIN (para las casillas y el auto-desbloqueo
+    // del popup), jamás el PIN ni nada derivado de él.
+    pinLength: pinLength || null,
+    attempts: pinAttempts,
   };
 }
 
@@ -107,7 +113,7 @@ async function handleSetPin({ pin }) {
   const token = await getUnlockedToken();
   if (!token) return { ok: false, error: 'Inicia sesión primero' };
   const encToken = await encryptWithPin(token, pin);
-  await chrome.storage.local.set({ encToken, pinAttempts: 0 });
+  await chrome.storage.local.set({ encToken, pinAttempts: 0, pinLength: pin.length });
   await renewUnlock();
   return { ok: true };
 }
@@ -117,7 +123,9 @@ async function handleUnlock({ pin }) {
   if (!encToken) return { ok: false, error: 'Extensión no configurada' };
   try {
     const token = await decryptWithPin(encToken, pin);
-    await chrome.storage.local.set({ pinAttempts: 0 });
+    // pinLength también aquí: migra instalaciones que crearon el PIN antes de
+    // que existiera el auto-desbloqueo (se aprende en el primer acierto).
+    await chrome.storage.local.set({ pinAttempts: 0, pinLength: pin.length });
     await chrome.storage.session.set({ token, unlockedUntil: Date.now() + UNLOCK_MS });
     return { ok: true };
   } catch (_) {
@@ -260,14 +268,15 @@ async function handleVaultList() {
   return { ok: true, items: data.items };
 }
 
-async function handleCopySecret({ credId, field }) {
-  // Devuelve el valor para que el POPUP lo copie (clipboard funciona en el popup,
-  // no en el service worker). El secreto nunca toca una página web aquí.
+async function handleGetSecret({ credId }) {
+  // Devuelve usuario y contraseña para que el POPUP los use (el portapapeles
+  // funciona en el popup, no en el service worker). El popup lo pide al ABRIR
+  // el menú de copiar, así el clic posterior escribe dentro del gesto.
   const token = await getUnlockedToken();
   if (!token) return { ok: false, locked: true };
   const data = await api(`/api/extension/credentials/${credId}/secret`, { token });
   await renewUnlock();
-  return { ok: true, value: field === 'username' ? data.username : data.password };
+  return { ok: true, username: data.username || '', password: data.password || '' };
 }
 
 async function handleDeleteCredential({ credId }) {
@@ -468,7 +477,7 @@ const HANDLERS = {
   DISMISS_PENDING: (msg, sender) => handleDismissPending(msg, sender),
   OPEN_POPUP: () => handleOpenPopup(),
   VAULT_LIST: () => handleVaultList(),
-  COPY_SECRET: (msg) => handleCopySecret(msg),
+  GET_SECRET: (msg) => handleGetSecret(msg),
   DELETE_CREDENTIAL: (msg) => handleDeleteCredential(msg),
   UPDATE_CREDENTIAL: (msg) => handleUpdateCredential(msg),
   CREATE_CREDENTIAL: (msg) => handleCreateCredential(msg),

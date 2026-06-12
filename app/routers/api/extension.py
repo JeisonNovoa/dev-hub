@@ -139,6 +139,8 @@ def list_vault(
                 "domain": extract_domain(c.url),
                 "category": c.category,
                 "login_via": c.login_via,
+                # El popup lo necesita para no borrar las notas al editar.
+                "notes": c.notes,
             }
             for c in creds
         ]

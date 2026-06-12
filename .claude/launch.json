@@ -9,6 +9,15 @@
         ".venv\\Scripts\\python -m uvicorn app.main:app --reload --port 8000"
       ],
       "port": 8000
+    },
+    {
+      "name": "extension-popup",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": [
+        "-Command",
+        ".venv\\Scripts\\python -m http.server 4173 --directory extension"
+      ],
+      "port": 4173
     }
   ]
 }

@@ -33,13 +33,16 @@ Funciona en Chrome, Edge y Brave. **Costo: $0** (se usa en modo desarrollador).
   ícono `▸` dentro del campo de contraseña. Haz clic → si está bloqueado te pide
   el PIN → muestra tus cuentas guardadas para ese dominio (si hay varias, eliges
   cuál) → rellena.
-- **La bóveda (popup)**: clic en el ícono de la extensión → desbloqueas con el PIN
-  → ves todas tus credenciales con buscador. Si estás en una página con login
-  conocido, esa credencial sale arriba en "Este sitio" con botón **rellenar**.
-  Por cada credencial: abrir el sitio (↗), **copiar** (usuario o contraseña) y el
-  menú **⋮** (autocompletar la página, editar, eliminar).
+- **La bóveda (popup)**: clic en el ícono de la extensión → escribes el PIN en las
+  casillas y **se desbloquea solo al poner el último dígito** (sin botón; si te
+  equivocas, sacude, se limpia y muestra los intentos restantes) → ves todas tus
+  credenciales con buscador. Si estás en una página con login conocido, esa
+  credencial sale arriba en "Este sitio" con botón **rellenar**. Por cada
+  credencial: abrir el sitio (↗), **copiar** (usuario o contraseña) y el menú
+  **⋮** (autocompletar la página, editar, eliminar).
 - **Nueva credencial**: botón **+** en la bóveda → formulario con nombre, URL,
-  usuario, contraseña y categoría.
+  usuario, contraseña (con **generador** de contraseñas seguras), categoría y
+  notas. Al editar puedes **ver la contraseña actual**.
 - **Desbloqueo temporal**: tras poner el PIN queda desbloqueado **5 minutos**
   (cada uso renueva el tiempo). Después vuelve a pedir el PIN.
 - **Guardar un login nuevo**: inicia sesión normal en un sitio. En la página
@@ -65,6 +68,8 @@ Funciona en Chrome, Edge y Brave. **Costo: $0** (se usa en modo desarrollador).
 
 - Tu **PIN nunca sale del navegador**: solo se usa para cifrar localmente
   (PBKDF2 + AES-GCM) el token de acceso. Sin PIN, lo guardado es ilegible.
+  Para el auto-desbloqueo se guarda únicamente la **cantidad de dígitos** del
+  PIN (nunca el PIN ni nada derivado de él).
 - **5 intentos fallidos de PIN → se borra todo** y hay que reconectar.
 - El token y las contraseñas **nunca se exponen a las páginas web**: viven en el
   service worker; el relleno ocurre solo tras tu clic.

@@ -11,23 +11,36 @@
   </header>
 
   <!-- Estado: cargando -->
-  <section id="view-loading" class="view">
-    <p class="muted">Cargando…</p>
+  <section id="view-loading" class="view view-center">
+    <div class="spinner" role="status" aria-label="Cargando"></div>
   </section>
 
   <!-- Estado: login (email + contraseña) -->
   <section id="view-login" class="view" hidden>
-    <p class="muted small">Inicia sesión en tu Dev Hub. Solo la primera vez.</p>
-    <label>Email</label>
+    <div class="hero">
+      <div class="hero-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.74 5.74L9 18v3H6v-3l-3-3 4.26-4.26A6 6 0 0121 9z" />
+        </svg>
+      </div>
+      <p class="hero-title">Bienvenido a tu bóveda</p>
+      <p class="muted small">Inicia sesión con tu cuenta de Dev Hub. Solo la primera vez.</p>
+    </div>
+
+    <label for="login-email">Email</label>
     <input id="login-email" type="email" placeholder="tu@email.com" autocomplete="username" />
-    <label>Contraseña</label>
-    <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+    <label for="login-password">Contraseña</label>
+    <div class="input-group">
+      <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+      <button id="login-pwd-toggle" type="button" class="input-icon-btn" title="Mostrar / ocultar"></button>
+    </div>
     <p id="login-error" class="error" hidden></p>
     <button id="login-submit" class="btn primary">Iniciar sesión</button>
 
     <button id="login-advanced-toggle" class="link-btn">Configuración avanzada</button>
     <div id="login-advanced" hidden>
-      <label>Servidor de Dev Hub</label>
+      <label for="login-url">Servidor de Dev Hub</label>
       <input id="login-url" type="url" placeholder="https://tu-app.onrender.com" autocomplete="off" />
       <p class="muted tiny">Déjalo vacío para usar el servidor por defecto.</p>
     </div>
@@ -35,25 +48,53 @@
 
   <!-- Estado: crear PIN (una sola vez, tras login) -->
   <section id="view-setpin" class="view" hidden>
-    <p class="muted small">Crea un PIN de desbloqueo rápido (numérico, mín. 4 dígitos).</p>
-    <label>PIN</label>
+    <div class="hero">
+      <div class="hero-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v2h8z" />
+        </svg>
+      </div>
+      <p class="hero-title">Crea tu PIN</p>
+      <p class="muted small">Desbloqueo rápido de la bóveda. Numérico, mínimo 4 dígitos.</p>
+    </div>
+
+    <label for="setpin-pin">PIN</label>
     <input id="setpin-pin" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="ej. 2026" maxlength="12" />
-    <label>Repite el PIN</label>
+    <label for="setpin-pin2">Repite el PIN</label>
     <input id="setpin-pin2" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="repite el PIN" maxlength="12" />
     <p id="setpin-error" class="error" hidden></p>
     <button id="setpin-submit" class="btn primary">Guardar PIN</button>
-    <p class="muted tiny">Tu PIN nunca sale de este navegador: solo cifra el acceso localmente.</p>
+    <p class="muted tiny center">Tu PIN nunca sale de este navegador: solo cifra el acceso localmente.</p>
   </section>
 
   <!-- Estado: bloqueado (pedir PIN) -->
   <section id="view-locked" class="view" hidden>
-    <p class="muted small">Tu bóveda está bloqueada</p>
-    <p class="mono email-line"><span id="locked-email"></span></p>
-    <label>PIN</label>
-    <input id="unlock-pin" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="••••" maxlength="12" autofocus />
-    <p id="unlock-error" class="error" hidden></p>
-    <button id="unlock-submit" class="btn primary">Desbloquear</button>
-    <button id="locked-logout" class="btn ghost">Cerrar sesión</button>
+    <div class="hero">
+      <div class="hero-icon locked">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v2h8z" />
+        </svg>
+      </div>
+      <p class="hero-title">Bóveda bloqueada</p>
+      <p id="locked-email" class="mono lock-email"></p>
+    </div>
+
+    <!-- Casillas segmentadas (cuando se conoce la longitud del PIN) o input libre.
+         El input real captura el teclado; las casillas solo lo reflejan. -->
+    <div class="pin-wrap" id="pin-wrap">
+      <div id="pin-boxes" class="pin-boxes" hidden></div>
+      <input id="unlock-pin" type="password" inputmode="numeric" autocomplete="off"
+             maxlength="12" class="pin-input" aria-label="PIN de desbloqueo" />
+    </div>
+    <p id="unlock-hint" class="muted tiny center" hidden>Enter para desbloquear</p>
+    <p id="unlock-error" class="error center" hidden></p>
+    <p id="unlock-warn" class="warn center" hidden></p>
+
+    <div class="lock-foot">
+      <button id="locked-logout" class="link-btn danger">Cerrar sesión</button>
+    </div>
   </section>
 
   <!-- Estado: desbloqueado — la bóveda -->
@@ -61,6 +102,7 @@
     <!-- Barra de acciones -->
     <div class="vault-top">
       <input id="vault-search" type="search" placeholder="Buscar…" class="vault-search" />
+      <button id="vault-open-web" class="icon-btn" title="Abrir Dev Hub en el navegador"></button>
       <button id="vault-new" class="icon-btn" title="Nueva credencial">+</button>
     </div>
     <select id="vault-category" class="vault-filter" title="Filtrar por categoría">
@@ -79,9 +121,18 @@
     <!-- Lista completa -->
     <p class="vault-section-title">Todos los elementos <span id="vault-count" class="muted"></span></p>
     <div id="vault-list" class="vault-list"></div>
-    <p id="vault-empty" class="muted small" hidden>Sin credenciales guardadas aún.</p>
+
+    <!-- Bóveda vacía -->
+    <div id="vault-empty" class="empty-state" hidden>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.74 5.74L9 18v3H6v-3l-3-3 4.26-4.26A6 6 0 0121 9z" />
+      </svg>
+      <p>Tu bóveda está vacía</p>
+      <button id="vault-empty-add" class="btn primary slim">Añadir credencial</button>
+    </div>
+    <p id="vault-noresults" class="muted small center" hidden></p>
     <p id="vault-error" class="error" hidden></p>
-    <p id="vault-toast" class="error" hidden></p>
 
     <!-- Pie -->
     <div class="vault-footer">
@@ -104,11 +155,11 @@
       <span id="form-title" class="form-title">Nueva credencial</span>
     </div>
     <input type="hidden" id="form-id" />
-    <label>Nombre / etiqueta</label>
+    <label for="form-label">Nombre / etiqueta</label>
     <input id="form-label" type="text" placeholder="ej. Cartesia" />
-    <label>URL</label>
+    <label for="form-url">URL</label>
     <input id="form-url" type="url" placeholder="https://…" />
-    <label>Método de acceso</label>
+    <label for="form-login-via">Método de acceso</label>
     <select id="form-login-via">
       <option value="email">email + contraseña</option>
       <option value="google">Google</option>
@@ -116,24 +167,31 @@
       <option value="microsoft">Microsoft</option>
       <option value="other">otro</option>
     </select>
-    <label>Usuario / email</label>
+    <label for="form-username" id="form-username-label">Usuario / email</label>
     <input id="form-username" type="text" autocomplete="off" />
     <div id="form-password-block">
-      <label>Contraseña</label>
-      <div class="pwd-row">
+      <label for="form-password">Contraseña</label>
+      <div class="input-group">
         <input id="form-password" type="password" autocomplete="new-password" />
-        <button id="form-pwd-toggle" type="button" class="icon-btn" title="Mostrar/ocultar">👁</button>
+        <button id="form-pwd-toggle" type="button" class="input-icon-btn" title="Mostrar / ocultar"></button>
+        <button id="form-pwd-gen" type="button" class="input-icon-btn" title="Generar contraseña segura"></button>
       </div>
+      <button id="form-pwd-reveal" type="button" class="link-btn" hidden>ver contraseña actual</button>
     </div>
-    <label>Categoría</label>
+    <label for="form-category">Categoría</label>
     <select id="form-category">
       <option value="personal">personal</option>
       <option value="work">trabajo</option>
       <option value="project">proyecto</option>
     </select>
+    <label for="form-notes">Notas</label>
+    <textarea id="form-notes" rows="2" placeholder="opcional"></textarea>
     <p id="form-error" class="error" hidden></p>
     <button id="form-submit" class="btn primary">Guardar</button>
   </section>
+
+  <!-- Toast global (copiado, errores, confirmaciones) -->
+  <div id="toast" class="toast" role="status"></div>
 
   <script src="popup.js"></script>
 </body>
