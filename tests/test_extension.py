@@ -190,6 +190,44 @@ def test_vault_requires_token(client):
     assert client.get("/api/extension/credentials").status_code == 401
 
 
+# ─── Última vez usada (orden por uso reciente) ───────────────────────────────
+
+def test_secret_access_marks_last_used(client, ext_token, db):
+    from app.models import Credential
+
+    cred_id = _create_credential(client, "Usada", "https://usada.com")
+    assert db.query(Credential).get(cred_id).last_used_at is None
+
+    client.get(f"/api/extension/credentials/{cred_id}/secret", headers=_bearer(ext_token))
+    db.expire_all()
+    assert db.query(Credential).get(cred_id).last_used_at is not None
+
+
+def test_vault_orders_by_recent_use_nulls_last(client, ext_token):
+    id_a = _create_credential(client, "AAA nunca usada", "https://a.com")
+    id_b = _create_credential(client, "ZZZ usada", "https://z.com")
+
+    # Usar la ZZZ: debe pasar al frente pese al orden alfabético
+    client.get(f"/api/extension/credentials/{id_b}/secret", headers=_bearer(ext_token))
+
+    items = client.get("/api/extension/credentials", headers=_bearer(ext_token)).json()["items"]
+    assert [i["id"] for i in items] == [id_b, id_a]
+    assert items[0]["last_used_at"] is not None
+    assert items[1]["last_used_at"] is None
+
+
+def test_match_orders_most_used_first(client, ext_token):
+    id_a = _create_credential(client, "Cuenta A", "https://github.com")
+    id_b = _create_credential(client, "Cuenta B", "https://github.com")
+
+    client.get(f"/api/extension/credentials/{id_b}/secret", headers=_bearer(ext_token))
+
+    items = client.get(
+        "/api/extension/credentials/match?domain=github.com", headers=_bearer(ext_token)
+    ).json()["items"]
+    assert [i["id"] for i in items] == [id_b, id_a]
+
+
 def test_create_oauth_credential_from_extension(client, ext_token):
     res = client.post("/api/extension/credentials", json={
         "label": "deepgram.com",

@@ -29,6 +29,8 @@ class Credential(Base, TimestampMixin):
     category: Mapped[str] = mapped_column(String(20), default="project", nullable=False)
     login_via: Mapped[str] = mapped_column(String(20), default="email", nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
+    # Última vez que se usó el secreto (autofill/copiar/ver desde la extensión).
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     service: Mapped["Service | None"] = relationship(back_populates="credentials")  # type: ignore[name-defined]

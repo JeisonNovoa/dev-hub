@@ -122,11 +122,15 @@ def list_vault(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_user_from_extension_token),
 ) -> dict:
-    """Toda la bóveda para poblar el popup. Sin contraseñas (se piden por /secret)."""
+    """Toda la bóveda para poblar el popup. Sin contraseñas (se piden por /secret).
+
+    Ordenada por uso reciente: lo que más usas sale arriba; lo nunca usado, al
+    final por nombre.
+    """
     creds = (
         db.query(Credential)
         .filter(Credential.user_id == current_user.id, Credential.deleted_at.is_(None))
-        .order_by(Credential.label)
+        .order_by(Credential.last_used_at.desc().nulls_last(), Credential.label)
         .all()
     )
     return {
@@ -139,6 +143,7 @@ def list_vault(
                 "domain": extract_domain(c.url),
                 "category": c.category,
                 "login_via": c.login_via,
+                "last_used_at": c.last_used_at.isoformat() if c.last_used_at else None,
                 # El popup lo necesita para no borrar las notas al editar.
                 "notes": c.notes,
             }
@@ -164,7 +169,8 @@ def match_credentials(
             Credential.deleted_at.is_(None),
             Credential.url.isnot(None),
         )
-        .order_by(Credential.label)
+        # La cuenta que más usas en el dominio sale primera en el dropdown.
+        .order_by(Credential.last_used_at.desc().nulls_last(), Credential.label)
         .all()
     )
     items = [
@@ -193,6 +199,10 @@ def credential_secret(
     )
     if not cred:
         raise HTTPException(status_code=404, detail="Credencial no encontrada")
+    # Acceder al secreto = uso real (autofill, copiar o ver la contraseña):
+    # alimenta el orden por uso reciente de la bóveda y el dropdown.
+    cred.last_used_at = datetime.now(timezone.utc)
+    db.commit()
     logger.info("Secreto de credencial accedido vía extensión: id=%d user=%d", cred.id, current_user.id)
     return {"id": cred.id, "username": cred.username, "password": cred.password}
 
