@@ -26,9 +26,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Ping /health
+      - name: Ping /health (con /login de respaldo)
         run: |
           # max-time alto: si estaba dormido, esta misma petición lo despierta (~30-60s)
-          curl -fsS --max-time 120 --retry 2 --retry-delay 5 \
-            https://dev-hub-ogdr.onrender.com/health
-          echo "Render despierto"
+          BASE=https://dev-hub-ogdr.onrender.com
+          if curl -fsS --max-time 120 --retry 2 --retry-delay 5 "$BASE/health"; then
+            echo "Render despierto (/health)"
+          else
+            # /health aún no desplegado: cualquier 200 mantiene vivo el servicio
+            curl -fsS -o /dev/null --max-time 120 --retry 2 --retry-delay 5 "$BASE/login"
+            echo "AVISO: /health no responde aún; se usó /login como respaldo"
+          fi
