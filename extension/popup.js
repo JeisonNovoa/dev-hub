@@ -710,6 +710,7 @@ $('login-submit').addEventListener('click', async () => {
   const email = $('login-email').value.trim();
   const password = $('login-password').value;
   const apiUrl = $('login-url').value.trim();
+  const totpCode = $('login-totp').value.trim();
 
   if (!email || !password) return showError('login-error', 'Email y contraseña son obligatorios');
 
@@ -717,9 +718,17 @@ $('login-submit').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = 'Entrando…';
   try {
-    const res = await send({ type: 'LOGIN', email, password, apiUrl, deviceName: 'Chrome' });
-    if (!res.ok) throw new Error(res.error || 'No se pudo iniciar sesión');
+    const res = await send({ type: 'LOGIN', email, password, apiUrl, totpCode, deviceName: 'Chrome' });
+    if (!res.ok) {
+      // La cuenta tiene 2FA: revelar el campo del código y pedir reintento.
+      if ((res.error || '').includes('2FA')) {
+        $('login-totp-block').hidden = false;
+        $('login-totp').focus();
+      }
+      throw new Error(res.error || 'No se pudo iniciar sesión');
+    }
     $('login-password').value = '';
+    $('login-totp').value = '';
     await refresh(); // pasará a "crear PIN"
   } catch (err) {
     showError('login-error', err.message);
@@ -728,6 +737,8 @@ $('login-submit').addEventListener('click', async () => {
     btn.textContent = 'Iniciar sesión';
   }
 });
+
+$('login-totp').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('login-submit').click(); });
 
 $('login-email').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('login-password').focus(); });
 $('login-password').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('login-submit').click(); });

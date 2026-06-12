@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session
 from app.auth import (
     COOKIE_NAME,
     create_session_cookie,
+    create_totp_pending_token,
     hash_password,
+    read_totp_pending_token,
     verify_password,
+    verify_totp,
 )
 from app.database import get_db
 from app.dependencies import get_current_user_optional
@@ -65,10 +68,59 @@ def login(
             },
             status_code=401,
         )
+
+    # Con 2FA activo, la contraseña no basta: segundo paso con código TOTP.
+    if user.totp_enabled:
+        return templates.TemplateResponse(
+            "auth/totp.html",
+            {
+                "request": request,
+                "current_user": None,
+                "pending_token": create_totp_pending_token(user.id),
+                "error": None,
+            },
+        )
+
     from app.config import settings
     redirect = RedirectResponse(url="/", status_code=303)
     _set_session(redirect, user.id, secure=not settings.debug)
     logger.info("Login exitoso: user_id=%s", user.id)
+    return redirect
+
+
+@router.post("/login/2fa")
+@limiter.limit("10/minute")
+def login_totp(
+    request: Request,
+    pending_token: str = Form(...),
+    code: str = Form(...),
+    db: Session = Depends(get_db),
+) -> Response:
+    user_id = read_totp_pending_token(pending_token)
+    user = db.query(User).filter(User.id == user_id).first() if user_id else None
+
+    if not user or not user.is_active or not user.totp_enabled:
+        # Token vencido/alterado: volver a empezar el login.
+        logger.warning("Paso 2FA con token inválido o vencido")
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not verify_totp(user.totp_secret, code):
+        logger.warning("Código 2FA incorrecto: user_id=%s", user.id)
+        return templates.TemplateResponse(
+            "auth/totp.html",
+            {
+                "request": request,
+                "current_user": None,
+                "pending_token": pending_token,
+                "error": "Código incorrecto. Revisa tu app de autenticación.",
+            },
+            status_code=401,
+        )
+
+    from app.config import settings
+    redirect = RedirectResponse(url="/", status_code=303)
+    _set_session(redirect, user.id, secure=not settings.debug)
+    logger.info("Login exitoso con 2FA: user_id=%s", user.id)
     return redirect
 
 

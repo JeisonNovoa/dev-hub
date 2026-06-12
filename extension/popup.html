@@ -35,6 +35,11 @@
       <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
       <button id="login-pwd-toggle" type="button" class="input-icon-btn" title="Mostrar / ocultar"></button>
     </div>
+    <div id="login-totp-block" hidden>
+      <label for="login-totp">Código 2FA</label>
+      <input id="login-totp" type="text" inputmode="numeric" maxlength="6"
+             placeholder="123456" autocomplete="one-time-code" />
+    </div>
     <p id="login-error" class="error" hidden></p>
     <button id="login-submit" class="btn primary">Iniciar sesión</button>
 

@@ -95,13 +95,13 @@ async function api(path, { method = 'GET', body = null, token = null } = {}) {
 
 // Paso 1: login con email+contraseña. Crea el token pero aún no se guarda cifrado
 // (eso ocurre al definir el PIN). El token queda desbloqueado en sesión.
-async function handleLogin({ apiUrl, email, password, deviceName }) {
+async function handleLogin({ apiUrl, email, password, totpCode, deviceName }) {
   if (apiUrl && apiUrl.trim()) {
     await chrome.storage.local.set({ apiUrl: apiUrl.trim().replace(/\/+$/, '') });
   }
   const data = await api('/api/extension/login', {
     method: 'POST',
-    body: { email, password, name: deviceName || 'Chrome' },
+    body: { email, password, name: deviceName || 'Chrome', totp_code: totpCode || null },
   });
   await chrome.storage.local.set({ email: data.email });
   await chrome.storage.session.set({ token: data.token, unlockedUntil: Date.now() + UNLOCK_MS });

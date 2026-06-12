@@ -141,6 +141,22 @@ psql "postgresql://usuario:password@host:5432/postgres" < devhub.sql
 
 También se puede correr manualmente: Actions → "Backup de la base de datos" → Run workflow.
 
+## Seguridad
+
+### 2FA (verificación en dos pasos)
+
+Actívalo en la web: **Seguridad → Activar 2FA** (escanea el QR con Google
+Authenticator o similar y confirma con un código). Con 2FA activo, el login de
+la web y de la extensión piden además el código de 6 dígitos.
+
+**¿Perdiste el autenticador?** Como la base de datos es tuya, puedes desactivar
+el 2FA directamente (el secreto se borra y el login vuelve a ser solo contraseña):
+
+```sql
+UPDATE users SET totp_secret = NULL, totp_confirmed_at = NULL
+WHERE email = 'tu@email.com';
+```
+
 ## Si las contraseñas se ven como `gAAAAA...`
 
 Ese texto es el token cifrado: significa que la `ENCRYPTION_KEY` configurada no es la misma con la que se cifraron los datos (rotaste la clave, o la migración los dobló-cifró). Para arreglarlo:

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
-from app.auth import generate_extension_token, hash_extension_token, verify_password
+from app.auth import generate_extension_token, hash_extension_token, verify_password, verify_totp
 from app.database import get_db
 from app.dependencies import get_current_user, get_user_from_extension_token
 from app.limiter import limiter
@@ -29,6 +29,7 @@ class ExtensionLogin(BaseModel):
     email: str
     password: str
     name: str = Field(default="Extensión", max_length=100)
+    totp_code: str | None = None
 
 
 _VALID_LOGIN_VIA = {"email", "google", "github", "microsoft", "other"}
@@ -83,6 +84,14 @@ def extension_login(
     if not user or not user.is_active or not verify_password(data.password, user.hashed_password):
         logger.warning("Login de extensión fallido para email: %s", data.email)
         raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
+
+    # Con 2FA activo, la extensión también exige el código (si no, sería un bypass).
+    if user.totp_enabled:
+        if not data.totp_code:
+            raise HTTPException(status_code=401, detail="Se requiere el código 2FA")
+        if not verify_totp(user.totp_secret, data.totp_code):
+            logger.warning("Código 2FA incorrecto en login de extensión: user_id=%s", user.id)
+            raise HTTPException(status_code=401, detail="Código 2FA incorrecto")
 
     token = generate_extension_token()
     db.add(ExtensionToken(user_id=user.id, token_hash=hash_extension_token(token), name=data.name))

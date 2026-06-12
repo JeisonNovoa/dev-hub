@@ -1,6 +1,9 @@
-from sqlalchemy import Boolean, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.crypto import EncryptedText
 from app.models.common import Base, TimestampMixin
 
 
@@ -11,3 +14,11 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # 2FA (TOTP): el secreto se guarda cifrado y solo cuenta como activo cuando
+    # el usuario lo confirmó con un código válido (totp_confirmed_at no nulo).
+    totp_secret: Mapped[str | None] = mapped_column(EncryptedText, nullable=True, default=None)
+    totp_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+
+    @property
+    def totp_enabled(self) -> bool:
+        return bool(self.totp_secret and self.totp_confirmed_at)
