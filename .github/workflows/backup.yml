@@ -1,0 +1,68 @@
+# Backup diario y cifrado de la base de datos (Supabase) como artefacto de GitHub.
+#
+# Requiere dos secrets en Settings → Secrets and variables → Actions:
+#   DATABASE_URL       — la URL de Supabase (sirve tal cual está en .env, con +psycopg2)
+#   BACKUP_PASSPHRASE  — frase con la que se cifra el dump (¡guárdala fuera de Dev Hub!)
+#
+# Restaurar: ver sección "Backups" del README.
+
+name: Backup de la base de datos
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # diario a las 08:00 UTC = 3:00 a.m. Colombia
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Instalar cliente PostgreSQL 17 (Supabase corre PG 17)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Dump comprimido y cifrado (AES-256)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          # Acepta la URL tal cual está en .env (quita el dialecto de SQLAlchemy si viene)
+          CLEAN_URL="${DATABASE_URL/postgresql+psycopg2:/postgresql:}"
+          STAMP=$(date -u +%Y-%m-%d_%H%M)
+          FILE="devhub_${STAMP}.sql.gz"
+          pg_dump "$CLEAN_URL" --no-owner --no-privileges | gzip -9 > "$FILE"
+          # Un dump sano de esta BD jamás es tan pequeño: aborta si vino vacío
+          test "$(stat -c%s "$FILE")" -gt 1024
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt \
+            -pass env:BACKUP_PASSPHRASE -in "$FILE" -out "$FILE.enc"
+          shred -u "$FILE"
+          echo "FILE_ENC=$FILE.enc" >> "$GITHUB_ENV"
+
+      - name: Verificar que el backup es restaurable (descifrado de prueba)
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \
+            -pass env:BACKUP_PASSPHRASE -in "$FILE_ENC" -out check.sql.gz
+          gunzip -c check.sql.gz > check.sql
+          grep -q "PostgreSQL database dump" check.sql
+          grep -q "CREATE TABLE" check.sql
+          shred -u check.sql check.sql.gz
+          echo "Backup verificado: descifra correctamente y contiene el esquema"
+
+      - name: Subir artefacto (retención 30 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: devhub-backup-${{ github.run_id }}
+          path: "*.sql.gz.enc"
+          retention-days: 30
+          if-no-files-found: error

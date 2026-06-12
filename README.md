@@ -111,6 +111,33 @@ OLD_ENCRYPTION_KEYS=
 SECRET_KEY=
 ```
 
+## Backups
+
+Un workflow de GitHub Actions ([.github/workflows/backup.yml](.github/workflows/backup.yml))
+hace un `pg_dump` diario (3:00 a.m. Colombia), lo cifra con AES-256 y lo guarda como
+artefacto del repo con retención de 30 días. Cada corrida verifica que el backup
+descifra correctamente antes de subirlo.
+
+**Secrets requeridos** (Settings → Secrets and variables → Actions):
+- `DATABASE_URL` — la URL de Supabase (sirve tal cual está en `.env`)
+- `BACKUP_PASSPHRASE` — frase de cifrado. **Guárdala fuera de Dev Hub**: sin ella
+  los backups son ilegibles.
+
+**Restaurar un backup:**
+
+```bash
+# 1. Descargar el artefacto desde GitHub → Actions → corrida → Artifacts
+# 2. Descifrar y descomprimir
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \
+  -pass pass:TU_PASSPHRASE -in devhub_FECHA.sql.gz.enc -out devhub.sql.gz
+gunzip devhub.sql.gz
+
+# 3. Restaurar contra una base vacía (¡cuidado: psql ejecuta el dump completo!)
+psql "postgresql://usuario:password@host:5432/postgres" < devhub.sql
+```
+
+También se puede correr manualmente: Actions → "Backup de la base de datos" → Run workflow.
+
 ## Si las contraseñas se ven como `gAAAAA...`
 
 Ese texto es el token cifrado: significa que la `ENCRYPTION_KEY` configurada no es la misma con la que se cifraron los datos (rotaste la clave, o la migración los dobló-cifró). Para arreglarlo:
