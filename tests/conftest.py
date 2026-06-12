@@ -7,7 +7,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-# Debe establecerse ANTES de importar cualquier módulo de app
+# Debe establecerse ANTES de importar cualquier módulo de app.
+# DATABASE_URL se fuerza a memoria para que los tests sean herméticos: sin esto,
+# Settings lee .env (que puede apuntar a producción) y la purga del lifespan
+# correría contra la BD real; en CI (sin .env) reventaría por tablas inexistentes.
+os.environ["DATABASE_URL"] = "sqlite://"
 os.environ.setdefault("ENCRYPTION_KEY", Fernet.generate_key().decode())
 os.environ.setdefault("SECRET_KEY", "test-secret-key-at-least-32-chars-long!!")
 
@@ -25,6 +29,12 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# La purga del lifespan usa app.database.SessionLocal (import tardío dentro de
+# lifespan): se apunta a la BD de tests para que arranque sobre tablas reales.
+import app.database as _app_database  # noqa: E402
+
+_app_database.SessionLocal = TestingSessionLocal
 
 
 @pytest.fixture(autouse=True)

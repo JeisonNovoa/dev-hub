@@ -1,0 +1,57 @@
+# Corre la suite completa y el build del frontend en cada push y pull request.
+# Sin secrets: los tests son herméticos (SQLite en memoria, claves generadas).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests backend (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt
+
+      - name: Tests
+        run: pytest tests/ -q
+
+  frontend:
+    name: Build CSS y sintaxis de la extensión
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Build Tailwind (mismo comando que el deploy de Render)
+        run: |
+          npm ci
+          npm run build:css
+
+      - name: Sintaxis de la extensión
+        run: |
+          for f in extension/*.js; do
+            node --check "$f"
+            echo "OK $f"
+          done
+          python3 -c "import json; json.load(open('extension/manifest.json'))"
+          echo "OK extension/manifest.json"

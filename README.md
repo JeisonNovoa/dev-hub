@@ -1,5 +1,8 @@
 # Dev Hub
 
+[![CI](https://github.com/JeisonNovoa/dev-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/JeisonNovoa/dev-hub/actions/workflows/ci.yml)
+[![Backup](https://github.com/JeisonNovoa/dev-hub/actions/workflows/backup.yml/badge.svg)](https://github.com/JeisonNovoa/dev-hub/actions/workflows/backup.yml)
+
 Hub personal de desarrollo — centraliza proyectos, credenciales y servicios en una sola app web propia, con cuentas privadas por usuario.
 
 ## El problema que resuelve
