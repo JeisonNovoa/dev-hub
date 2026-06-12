@@ -102,6 +102,32 @@ def trash_page() -> RedirectResponse:
     return RedirectResponse(url="/trash", status_code=301)
 
 
+@router.get("/credentials/higiene", response_class=HTMLResponse)
+def hygiene_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    """Informe de higiene: reutilizadas, débiles, sin URL y sin contraseña.
+
+    Las contraseñas se analizan en memoria del servidor; al template solo
+    llegan los hallazgos, nunca las contraseñas.
+    """
+    from app.services.password_hygiene import analyze
+
+    credentials = (
+        db.query(Credential)
+        .filter(Credential.user_id == current_user.id, Credential.deleted_at.is_(None))
+        .order_by(Credential.label)
+        .all()
+    )
+    report = analyze(credentials)
+    return templates.TemplateResponse(
+        "credentials/hygiene.html",
+        {"request": request, "report": report, "current_user": current_user},
+    )
+
+
 @router.get("/credentials/{cred_id}", response_class=HTMLResponse)
 def credential_detail_page(
     cred_id: int,
