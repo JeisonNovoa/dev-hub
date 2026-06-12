@@ -34,11 +34,15 @@ jobs:
           BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
           set -euo pipefail
+          # Binario versionado directo: el runner trae también el cliente 16 y el
+          # wrapper genérico de Ubuntu puede resolver a esa versión (mismatch).
+          PG_DUMP=/usr/lib/postgresql/17/bin/pg_dump
+          "$PG_DUMP" --version
           # Acepta la URL tal cual está en .env (quita el dialecto de SQLAlchemy si viene)
           CLEAN_URL="${DATABASE_URL/postgresql+psycopg2:/postgresql:}"
           STAMP=$(date -u +%Y-%m-%d_%H%M)
           FILE="devhub_${STAMP}.sql.gz"
-          pg_dump "$CLEAN_URL" --no-owner --no-privileges | gzip -9 > "$FILE"
+          "$PG_DUMP" "$CLEAN_URL" --no-owner --no-privileges | gzip -9 > "$FILE"
           # Un dump sano de esta BD jamás es tan pequeño: aborta si vino vacío
           test "$(stat -c%s "$FILE")" -gt 1024
           openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt \
