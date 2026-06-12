@@ -143,6 +143,26 @@
   color: #d1d5db !important;
 }
 
+/* Acceso OAuth: informativo, sin interacción */
+.devhub-ext-account-oauth {
+  cursor: default !important;
+  background: rgba(22, 25, 34, 0.6) !important;
+  border-style: dashed !important;
+}
+
+.devhub-ext-account-oauth:hover {
+  border-color: #2a2d3e !important;
+}
+
+.devhub-ext-account-hint {
+  font-size: 11px !important;
+  color: #22c55e !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
 .devhub-ext-banner {
   position: fixed !important;
   top: 12px !important;

@@ -170,6 +170,32 @@
     const PROVIDER_NAMES = { google: 'Google', github: 'GitHub', microsoft: 'Microsoft', other: 'otro método' };
 
     for (const item of items) {
+      const isOauth = item.login_via && item.login_via !== 'email';
+
+      if (isOauth) {
+        // Acceso OAuth: no hay nada que rellenar — fila informativa, no clickeable.
+        const info = document.createElement('div');
+        info.className = `${PREFIX}-account ${PREFIX}-account-oauth`;
+
+        const label = document.createElement('span');
+        label.className = `${PREFIX}-account-label`;
+        label.textContent = item.label;
+        const badge = document.createElement('span');
+        badge.className = `${PREFIX}-badge`;
+        badge.textContent = PROVIDER_NAMES[item.login_via] || item.login_via;
+        label.appendChild(badge);
+
+        const hint = document.createElement('span');
+        hint.className = `${PREFIX}-account-hint`;
+        hint.textContent =
+          `Aquí inicias con ${PROVIDER_NAMES[item.login_via] || item.login_via}` +
+          (item.username ? ` · ${item.username}` : '');
+
+        info.append(label, hint);
+        p.appendChild(info);
+        continue;
+      }
+
       const row = document.createElement('button');
       row.type = 'button';
       row.className = `${PREFIX}-account`;
@@ -177,14 +203,6 @@
       const label = document.createElement('span');
       label.className = `${PREFIX}-account-label`;
       label.textContent = item.label;
-
-      const isOauth = item.login_via && item.login_via !== 'email';
-      if (isOauth) {
-        const badge = document.createElement('span');
-        badge.className = `${PREFIX}-badge`;
-        badge.textContent = PROVIDER_NAMES[item.login_via] || item.login_via;
-        label.appendChild(badge);
-      }
 
       const user = document.createElement('span');
       user.className = `${PREFIX}-account-user`;
@@ -198,17 +216,7 @@
           return;
         }
         fillCredentials(passwordInput, res.username, res.password);
-        if (isOauth) {
-          // No hay contraseña que rellenar: recordar el método y la cuenta.
-          renderMessage(
-            p,
-            `Recuerda: aquí inicias con ${PROVIDER_NAMES[item.login_via] || item.login_via}` +
-              (item.username ? ` usando ${item.username}` : ''),
-          );
-          setTimeout(closePanel, 4000);
-        } else {
-          closePanel();
-        }
+        closePanel();
       });
       p.appendChild(row);
     }

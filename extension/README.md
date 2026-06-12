@@ -51,12 +51,14 @@ Funciona en Chrome, Edge y Brave. **Costo: $0** (se usa en modo desarrollador).
   anteriores a 127 el popup no puede abrirse solo: el aviso te pide abrir la
   extensión manualmente.)
 - **Logins con Google/GitHub/Microsoft (OAuth)**: las credenciales OAuth se
-  marcan con su insignia en la bóveda y en el autofill. Al "rellenar" una, se
-  completa el correo y te recuerda el método ("aquí inicias con Google usando
-  tal correo"). Si la extensión detecta que hiciste clic en "Continuar con
-  Google" en un sitio nuevo, al volver te ofrece guardar el acceso — tú
-  completas el correo en el formulario (el flujo de Google ocurre fuera de la
-  página, así que la cuenta exacta no se puede leer).
+  marcan con su insignia y son **informativas, no rellenan nada**: al abrir el
+  autofill te dicen "Aquí inicias con Google · tu@correo" para que sepas qué
+  botón usar y con qué cuenta. Si en un dominio tienes cuentas mixtas (una con
+  contraseña y otra con Google), la de contraseña es clickeable y rellena; la
+  de Google solo informa. Si la extensión detecta que hiciste clic en
+  "Continuar con Google" en un sitio nuevo, al volver te ofrece guardar el
+  acceso — tú completas el correo en el formulario (el flujo de Google ocurre
+  fuera de la página, así que la cuenta exacta no se puede leer).
 - **Bloquear/cerrar sesión**: desde el pie de la bóveda en el popup.
 
 ## Seguridad (cómo está diseñada)

@@ -72,6 +72,48 @@ async function refresh() {
 let allCreds = [];
 let activeDomain = null;
 
+// Mismos íconos SVG del dashboard de Dev Hub.
+const ICONS = {
+  copy: 'M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z',
+  open: 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14',
+  check: 'M5 13l4 4L19 7',
+  dots: 'M12 5.5v.01M12 12v.01M12 18.5v.01',
+};
+
+function svgIcon(name) {
+  const span = document.createElement('span');
+  const width = name === 'dots' ? 3 : 2;
+  span.innerHTML =
+    `<svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">` +
+    `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="${width}" d="${ICONS[name]}"/></svg>`;
+  return span.firstChild;
+}
+
+let toastTimer = null;
+function showToast(message) {
+  const t = $('vault-toast');
+  t.textContent = message;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2500);
+}
+
+async function writeClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_) {
+    // Respaldo para Chrome que bloquee la Clipboard API en el popup.
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  }
+}
+
 function buildFavicon(cred) {
   const fav = document.createElement('span');
   fav.className = 'cred-favicon';
@@ -112,10 +154,23 @@ function openMenu(anchor, options) {
 
 async function copyField(credId, field, btn) {
   const res = await send({ type: 'COPY_SECRET', credId, field });
-  if (!res.ok) return;
-  await navigator.clipboard.writeText(res.value || '');
+  if (!res.ok) {
+    showToast(res.error || 'No se pudo obtener el valor');
+    if (res.locked) refresh();
+    return;
+  }
+  const ok = await writeClipboard(res.value || '');
+  if (!ok) {
+    showToast('No se pudo copiar al portapapeles');
+    return;
+  }
+  const previous = btn.firstChild;
+  btn.replaceChildren(svgIcon('check'));
   btn.classList.add('copied');
-  setTimeout(() => btn.classList.remove('copied'), 1500);
+  setTimeout(() => {
+    btn.replaceChildren(previous);
+    btn.classList.remove('copied');
+  }, 1400);
 }
 
 function credRow(cred, { showFill = false } = {}) {
@@ -143,7 +198,10 @@ function credRow(cred, { showFill = false } = {}) {
   const actions = document.createElement('div');
   actions.className = 'cred-actions';
 
-  if (showFill) {
+  // Solo los accesos con email+contraseña se pueden rellenar; los OAuth informan.
+  const isEmailLogin = !cred.login_via || cred.login_via === 'email';
+
+  if (showFill && isEmailLogin) {
     const fill = document.createElement('button');
     fill.className = 'cred-action cred-fill';
     fill.textContent = 'rellenar';
@@ -159,7 +217,7 @@ function credRow(cred, { showFill = false } = {}) {
     const open = document.createElement('button');
     open.className = 'cred-action';
     open.title = 'Abrir sitio';
-    open.textContent = '↗';
+    open.appendChild(svgIcon('open'));
     open.addEventListener('click', () => chrome.tabs.create({ url: cred.url }));
     actions.appendChild(open);
   }
@@ -167,27 +225,35 @@ function credRow(cred, { showFill = false } = {}) {
   const copy = document.createElement('button');
   copy.className = 'cred-action';
   copy.title = 'Copiar';
-  copy.textContent = '⧉';
+  copy.appendChild(svgIcon('copy'));
   copy.addEventListener('click', (e) => {
     e.stopPropagation();
-    openMenu(copy, [
-      { label: 'Copiar usuario', onClick: () => copyField(cred.id, 'username', copy) },
-      { label: 'Copiar contraseña', onClick: () => copyField(cred.id, 'password', copy) },
-    ]);
+    const options = [{ label: 'Copiar usuario', onClick: () => copyField(cred.id, 'username', copy) }];
+    if (isEmailLogin) {
+      options.push({ label: 'Copiar contraseña', onClick: () => copyField(cred.id, 'password', copy) });
+    }
+    openMenu(copy, options);
   });
   actions.appendChild(copy);
 
   const more = document.createElement('button');
   more.className = 'cred-action';
   more.title = 'Más';
-  more.textContent = '⋮';
+  more.appendChild(svgIcon('dots'));
   more.addEventListener('click', (e) => {
     e.stopPropagation();
-    openMenu(more, [
-      { label: 'Autocompletar esta página', onClick: async () => { const r = await send({ type: 'FILL_ACTIVE_TAB', credId: cred.id }); if (r.ok) window.close(); } },
+    const options = [];
+    if (isEmailLogin) {
+      options.push({
+        label: 'Autocompletar esta página',
+        onClick: async () => { const r = await send({ type: 'FILL_ACTIVE_TAB', credId: cred.id }); if (r.ok) window.close(); },
+      });
+    }
+    options.push(
       { label: 'Editar', onClick: () => openForm(cred) },
       { label: 'Eliminar', danger: true, onClick: () => deleteCred(cred) },
-    ]);
+    );
+    openMenu(more, options);
   });
   actions.appendChild(more);
 
@@ -197,12 +263,15 @@ function credRow(cred, { showFill = false } = {}) {
 
 function renderVault(filter = '') {
   const q = filter.trim().toLowerCase();
+  const category = $('vault-category').value;
   const list = $('vault-list');
   list.innerHTML = '';
 
-  const filtered = q
-    ? allCreds.filter((c) => (c.label || '').toLowerCase().includes(q) || (c.username || '').toLowerCase().includes(q))
-    : allCreds;
+  const filtered = allCreds.filter((c) => {
+    if (category && c.category !== category) return false;
+    if (!q) return true;
+    return (c.label || '').toLowerCase().includes(q) || (c.username || '').toLowerCase().includes(q);
+  });
 
   $('vault-count').textContent = filtered.length ? `(${filtered.length})` : '';
   $('vault-empty').hidden = filtered.length > 0;
@@ -263,6 +332,7 @@ async function deleteCred(cred) {
 }
 
 $('vault-search').addEventListener('input', (e) => renderVault(e.target.value));
+$('vault-category').addEventListener('change', () => renderVault($('vault-search').value));
 $('vault-new').addEventListener('click', () => openForm(null));
 
 // ─── Formulario (nueva / editar) ─────────────────────────────────────────────
