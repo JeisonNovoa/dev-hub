@@ -1,120 +1,110 @@
-{% for project in projects %}
-<div id="proj-card-{{ project.slug }}" class="relative group" x-data="{ confirming: false }" @mouseleave="confirming = false">
+{# Lista "Todos los proyectos": tabla densa en desktop, cards en móvil.
+   Recibe `projects` como lista de ProjectView (.project + campos derivados).
+   Es el target del endpoint HTMX /ui/dashboard/cards. #}
+{% from "partials/project_macros.html" import status_dot, activity_color, quick_actions, count_meta %}
 
-  <!-- Acciones en hover -->
-  <div class="absolute top-3 right-3 z-10 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-    <button type="button"
-            @click="confirming = false"
-            hx-get="/ui/projects/{{ project.slug }}/edit-modal"
-            hx-target="#edit-project-modal"
-            hx-swap="innerHTML"
-            hx-on::after-request="const m=document.getElementById('edit-project-modal'); m.classList.remove('hidden'); setTimeout(() => Alpine.initTree(m), 0)"
-            class="flex items-center gap-1 text-xs px-2.5 py-1 rounded-md bg-surface-card border border-surface-border text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors font-sans">
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
-      </svg>
-      editar
-    </button>
+{% if projects %}
+<div class="bg-surface-card/60 backdrop-blur-sm border border-surface-border rounded-2xl overflow-hidden">
 
-    <!-- Papelera: normal -->
-    <button type="button" x-show="!confirming" @click.stop="confirming = true"
-            class="p-1.5 rounded-md bg-surface-card border border-surface-border text-gray-500 hover:text-red-400 hover:border-red-800/50 transition-colors"
-            title="Mover a papelera">
-      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-      </svg>
-    </button>
-
-    <!-- Papelera: confirmar -->
-    <button x-show="confirming" style="display:none"
-            hx-post="/ui/projects/{{ project.slug }}/trash"
-            hx-target="#proj-card-{{ project.slug }}"
-            hx-swap="outerHTML"
-            class="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-red-900/20 border border-red-800/40 text-red-400 hover:bg-red-900/40 hover:text-red-300 transition-colors font-sans">
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-      </svg>
-      confirmar
-    </button>
+  {# Cabecera de columnas — solo desktop #}
+  <div class="hidden lg:grid grid-cols-[1.7fr_1.4fr_0.9fr_0.8fr_auto] gap-4 px-5 py-3 border-b border-surface-border bg-surface/40">
+    {% for col in ['proyecto', 'stack', 'contenido', 'actividad'] %}
+    <span class="text-[10px] font-mono uppercase tracking-[0.12em] text-gray-600">{{ col }}</span>
+    {% endfor %}
+    <span></span>
   </div>
 
-  <a href="/projects/{{ project.slug }}"
-     class="block bg-surface-card backdrop-blur-sm border border-surface-border rounded-xl p-5 transition-all duration-300 hover:border-accent/40 hover:shadow-glow hover:-translate-y-1 relative overflow-hidden">
-     
-    <!-- Gradiente sutil on hover -->
-    <div class="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-    <!-- Nombre -->
-    <h3 class="font-mono font-semibold text-gray-100 group-hover:text-accent transition-colors truncate text-sm mb-1.5 pr-28">
-      <span class="text-accent opacity-70 mr-1">▸</span>{{ project.name }}
-    </h3>
+  {% for pv in projects %}
+  {% set project = pv.project %}
+  {# La fila NO puede ser un <a> envolvente: contiene otro <a> (link de prod), y el
+     HTML no permite <a> anidados (el parser cierra el padre y rompe el grid).
+     Por eso usamos un overlay link absoluto + el resto del contenido encima. #}
+  <div id="proj-card-{{ project.slug }}"
+       class="group relative grid grid-cols-1 lg:grid-cols-[1.7fr_1.4fr_0.9fr_0.8fr_auto] gap-2 lg:gap-4 lg:items-center px-5 py-3.5 border-b border-surface-border/60 last:border-0 transition-colors hover:bg-surface-hover"
+       x-data="{ confirming: false }" @mouseleave="confirming = false">
 
-    <!-- Status badge -->
-    <span class="inline-flex items-center mb-3 text-xs px-2 py-0.5 rounded font-mono font-medium
-      {% if project.status == 'active' %}bg-accent/10 text-accent border border-accent/20
-      {% elif project.status == 'paused' %}bg-yellow-500/10 text-yellow-400 border border-yellow-500/20
-      {% else %}bg-gray-800/60 text-gray-500 border border-gray-700{% endif %}">
-      {% if project.status == 'active' %}● activo
-      {% elif project.status == 'paused' %}⏸ pausado
-      {% else %}— archivado{% endif %}
-    </span>
+    {# Overlay: toda la fila es clicable salvo donde hay controles (que van con z-10) #}
+    <a href="/projects/{{ project.slug }}" class="absolute inset-0" aria-label="{{ project.name }}"></a>
 
-    <!-- Descripción -->
-    {% if project.description %}
-    <p class="text-sm text-gray-400 mb-4 line-clamp-2 leading-relaxed">{{ project.description }}</p>
-    {% endif %}
+    {# Nombre + estado + descripción #}
+    <div class="relative flex items-center gap-3 min-w-0 pointer-events-none">
+      {{ status_dot(project.status) }}
+      <div class="min-w-0">
+        <p class="font-mono text-[13px] font-semibold text-gray-100 group-hover:text-accent transition-colors truncate">{{ project.name }}</p>
+        {% if project.description %}
+        <p class="text-xs text-gray-500 truncate mt-0.5">{{ project.description }}</p>
+        {% endif %}
+      </div>
+    </div>
 
-    <!-- Tech stack -->
-    {% if project.tech_stack %}
-    <div class="flex flex-wrap gap-1.5 mb-3">
-      {% for tech in project.tech_stack %}
-      <span class="text-xs px-2 py-0.5 rounded font-mono bg-surface border border-surface-border text-gray-500 group-hover:border-accent/20 transition-colors truncate max-w-full">
-        {{ tech }}
-      </span>
+    {# Stack #}
+    <div class="relative flex flex-wrap gap-1.5 items-center pointer-events-none">
+      {% for tech in project.tech_stack[:4] %}
+      <span class="text-[9.5px] font-mono text-gray-400 border border-surface-border rounded px-1.5 py-0.5">{{ tech }}</span>
       {% endfor %}
+      {% if project.tech_stack | length > 4 %}
+      <span class="text-[9.5px] font-mono text-gray-600">+{{ project.tech_stack | length - 4 }}</span>
+      {% endif %}
     </div>
-    {% endif %}
 
-    <!-- Contadores -->
-    {% set total_cmds = project.commands | length %}
-    {% set total_envs = project.env_vars | length %}
-    {% set total_repos = project.repos | length %}
-    {% set total_links = project.links | length %}
-    {% if total_repos or total_cmds or total_envs or total_links %}
-    <div class="flex flex-wrap gap-x-3 gap-y-1 mt-auto pt-3 border-t border-surface-border/60">
-      {% if total_repos %}
-      <span class="text-xs text-gray-600 font-mono">{{ total_repos }} repo{% if total_repos != 1 %}s{% endif %}</span>
-      {% endif %}
-      {% if total_cmds %}
-      <span class="text-xs text-gray-600 font-mono">{{ total_cmds }} cmd{% if total_cmds != 1 %}s{% endif %}</span>
-      {% endif %}
-      {% if total_envs %}
-      <span class="text-xs text-gray-600 font-mono">{{ total_envs }} env var{% if total_envs != 1 %}s{% endif %}</span>
-      {% endif %}
-      {% if total_links %}
-      <span class="text-xs text-gray-600 font-mono">{{ total_links }} link{% if total_links != 1 %}s{% endif %}</span>
-      {% endif %}
+    {# Contenido (contadores) #}
+    <div class="relative pointer-events-none">{{ count_meta(pv) }}</div>
+
+    {# Actividad #}
+    <span class="relative text-[11px] font-mono {{ activity_color(pv.recent) }} pointer-events-none">{{ pv.activity }}</span>
+
+    {# Quick actions (z-10 para quedar por encima del overlay) #}
+    <div class="relative z-10 flex items-center gap-1.5 lg:justify-end mt-1 lg:mt-0">
+      {{ quick_actions(pv) }}
+      {# Editar #}
+      <button type="button"
+              @click="confirming = false"
+              hx-get="/ui/projects/{{ project.slug }}/edit-modal"
+              hx-target="#edit-project-modal"
+              hx-swap="innerHTML"
+              hx-on::after-request="const m=document.getElementById('edit-project-modal'); m.classList.remove('hidden'); setTimeout(() => Alpine.initTree(m), 0)"
+              title="Editar proyecto"
+              class="w-7 h-7 flex items-center justify-center rounded-md border border-surface-border text-gray-500 hover:text-gray-100 hover:border-gray-500 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+        </svg>
+      </button>
+      {# Papelera: normal → confirmar #}
+      <button type="button" x-show="!confirming" @click="confirming = true"
+              title="Mover a papelera"
+              class="w-7 h-7 flex items-center justify-center rounded-md border border-surface-border text-gray-500 hover:text-red-400 hover:border-red-800/50 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </button>
+      <button x-show="confirming" style="display:none"
+              hx-post="/ui/projects/{{ project.slug }}/trash"
+              hx-target="#proj-card-{{ project.slug }}"
+              hx-swap="outerHTML"
+              class="flex items-center gap-1 text-[11px] font-mono px-2.5 h-7 rounded-md bg-red-900/20 border border-red-800/40 text-red-400 hover:bg-red-900/40 transition-colors whitespace-nowrap">
+        confirmar
+      </button>
     </div>
-    {% endif %}
-  </a>
+  </div>
+  {% endfor %}
 </div>
 
 {% else %}
-<!-- Empty state -->
-<div class="col-span-full flex flex-col items-center justify-center py-20 text-center">
+{# Estado vacío / sin resultados #}
+<div class="flex flex-col items-center justify-center py-16 text-center">
   <div class="w-12 h-12 rounded-xl bg-surface-card border border-surface-border flex items-center justify-center mb-4">
     <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
         d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
     </svg>
   </div>
-  <p class="text-gray-300 font-medium mb-1">Sin proyectos aún</p>
+  <p class="text-gray-300 font-medium mb-1">Sin proyectos</p>
   <p class="text-sm text-gray-600 mb-5">Crea tu primer proyecto para centralizar comandos, env vars y links.</p>
   <button onclick="document.getElementById('new-project-modal').classList.remove('hidden')"
           class="text-sm px-4 py-2 rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors font-medium">
-    + Crear primer proyecto
+    + Crear proyecto
   </button>
 </div>
-{% endfor %}
+{% endif %}

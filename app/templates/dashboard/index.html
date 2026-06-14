@@ -1,39 +1,72 @@
 {% extends "base.html" %}
+{% from "partials/project_macros.html" import recent_card %}
 
 {% block title %}Proyectos — Dev Hub{% endblock %}
 
 {% block content %}
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-  <h1 class="text-lg font-mono font-semibold text-gray-100">
-    proyectos/
-    <span class="text-gray-500 font-normal text-sm ml-1">{{ projects | length }} resultado{% if projects | length != 1 %}s{% endif %}</span>
-  </h1>
-  <div class="flex items-center gap-2">
+<!-- Header -->
+<div class="flex items-start justify-between gap-5 flex-wrap mb-6 animate-fade-in">
+  <div>
+    <h1 class="text-2xl font-semibold text-gray-100 tracking-tight">Proyectos</h1>
+    <p class="text-sm text-gray-400 mt-1">
+      {{ status_counts.active }} activo{% if status_counts.active != 1 %}s{% endif %}
+      {% if recent %}· último: <span class="text-gray-300">{{ recent[0].activity }}</span>{% endif %}
+    </p>
+  </div>
+  <div class="flex items-center gap-2.5">
     <button onclick="document.getElementById('import-modal').classList.remove('hidden')"
-            class="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-surface-card border border-surface-border text-gray-300 hover:text-gray-100 hover:border-accent/40 font-medium transition-all duration-300">
+            class="flex items-center gap-1.5 text-[13.5px] px-4 py-2 rounded-lg bg-surface-card border border-surface-border text-gray-300 hover:text-gray-100 hover:border-accent/40 transition-all duration-300">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" />
       </svg>
-      importar
+      Importar
     </button>
     <button onclick="document.getElementById('new-project-modal').classList.remove('hidden')"
-            class="text-sm px-4 py-2 rounded-lg bg-accent text-black hover:bg-accent-dim font-semibold transition-all duration-300 hover:shadow-glow hover:-translate-y-0.5">
-      + nuevo proyecto
+            class="flex items-center gap-1.5 text-[13.5px] px-4 py-2 rounded-lg bg-accent text-black font-semibold hover:bg-accent-dim transition-all duration-300 hover:shadow-glow hover:-translate-y-0.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M12 5v14M5 12h14" />
+      </svg>
+      Nuevo proyecto
     </button>
   </div>
 </div>
 
-<!-- Filtros -->
-<div class="flex flex-col sm:flex-row gap-3 mb-6">
+<!-- Buscador -->
+<div class="relative mb-8 animate-fade-in">
+  <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="7" stroke-width="2"></circle>
+    <path stroke-linecap="round" stroke-width="2" d="M21 21l-4.3-4.3"></path>
+  </svg>
   <input
     id="search-q"
     type="search"
     name="q"
     value="{{ q }}"
-    placeholder="Buscar proyectos, tech stack..."
-    class="flex-1 bg-surface-card/50 backdrop-blur-sm border border-surface-border rounded-lg px-4 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/50 transition-all duration-300 font-sans shadow-sm hover:border-gray-600"
-    oninput="scheduleSearch(this.value)"
+    placeholder="Busca un proyecto o tech stack…"
+    class="w-full bg-surface-card/60 backdrop-blur-sm border border-surface-border rounded-xl pl-11 pr-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-accent/45 focus:ring-2 focus:ring-accent/10 transition-all duration-300"
+    oninput="scheduleSearch()"
   />
+</div>
+
+<!-- Recientes (solo sin búsqueda/filtro) -->
+<div id="recent-section" class="mb-10 animate-fade-in {% if not recent %}hidden{% endif %}">
+  <div class="flex items-center gap-2.5 mb-3.5">
+    <h2 class="text-base font-semibold text-gray-100">Recientes</h2>
+    <span class="text-[11px] font-mono text-gray-600">los que tocaste últimamente</span>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+    {% for pv in recent %}
+    {{ recent_card(pv) }}
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Todos los proyectos -->
+<div class="flex items-center justify-between gap-4 flex-wrap mb-3.5">
+  <div class="flex items-center gap-2.5">
+    <h2 class="text-base font-semibold text-gray-100">Todos los proyectos</h2>
+    <span id="list-count" class="text-[11px] font-mono text-gray-600">{{ projects | length }} proyecto{% if projects | length != 1 %}s{% endif %}</span>
+  </div>
 
   <!-- Tabs de status -->
   <div class="flex items-center gap-1 bg-surface-card border border-surface-border rounded-lg p-1 overflow-x-auto max-w-full">
@@ -49,18 +82,18 @@
       data-status="{{ val }}"
       data-active="{{ 'true' if status_filter == val else 'false' }}"
       onclick="filterProjects(this)"
-      class="status-tab flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-mono transition-colors shrink-0 whitespace-nowrap
-        data-[active=true]:bg-surface data-[active=true]:text-gray-100 data-[active=true]:border data-[active=true]:border-surface-border
+      class="status-tab flex items-center gap-1.5 text-[11.5px] px-3 py-1.5 rounded-md font-mono transition-colors shrink-0 whitespace-nowrap
+        data-[active=true]:bg-surface data-[active=true]:text-gray-100
         data-[active=false]:text-gray-500 data-[active=false]:hover:text-gray-300">
       {{ label }}
-      <span class="font-mono">{{ count }}</span>
+      <span class="opacity-60">{{ count }}</span>
     </button>
     {% endfor %}
   </div>
 </div>
 
-<!-- Grid de proyectos -->
-<div id="project-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+<!-- Lista de proyectos (tabla/cards) -->
+<div id="project-grid">
   {% include "partials/project_cards.html" %}
 </div>
 
@@ -246,6 +279,15 @@
   </div>
 </div>
 
+<!-- Toast (confirmaciones de copiado) -->
+<div id="dash-toast"
+     class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2.5 bg-surface-card border border-accent/40 rounded-xl px-4 py-2.5 shadow-lg opacity-0 translate-y-2 pointer-events-none transition-all duration-200">
+  <svg class="w-4 h-4 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 13l4 4L19 7" />
+  </svg>
+  <span id="dash-toast-text" class="text-[13.5px] text-gray-100"></span>
+</div>
+
 <script>
   let _activeStatus = '{{ status_filter }}';
   let _searchTimer = null;
@@ -257,18 +299,55 @@
     _loadCards();
   }
 
-  function scheduleSearch(q) {
+  function scheduleSearch() {
     clearTimeout(_searchTimer);
-    _searchTimer = setTimeout(() => _loadCards(), 300);
+    _searchTimer = setTimeout(_loadCards, 300);
   }
 
   function _loadCards() {
     const q = document.getElementById('search-q').value;
     const params = new URLSearchParams({ q, status: _activeStatus });
+    // Recientes solo tiene sentido en la vista por defecto (sin búsqueda ni filtro).
+    const section = document.getElementById('recent-section');
+    if (section) section.classList.toggle('hidden', Boolean(q) || Boolean(_activeStatus));
     htmx.ajax('GET', '/ui/dashboard/cards?' + params.toString(), {
       target: '#project-grid',
-      swap: 'innerHTML'
+      swap: 'innerHTML',
     });
+  }
+
+  // Toast reutilizable.
+  let _toastTimer = null;
+  function showDashToast(message) {
+    const toast = document.getElementById('dash-toast');
+    document.getElementById('dash-toast-text').textContent = message;
+    toast.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => {
+      toast.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
+    }, 1900);
+  }
+
+  // Copia texto desde botones data-copy y da feedback (icono ✓ + toast).
+  // Global: lo usan las cards de recientes y las filas de la tabla.
+  async function copyText(btn, event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    const text = btn.dataset.copy || '';
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (_) {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+    }
+    showDashToast(btn.dataset.copyLabel || 'Copiado');
+    const label = btn.querySelector('.copy-text');
+    if (label) {
+      const prev = label.textContent;
+      label.textContent = '✓ copiado';
+      btn.classList.add('copied');
+      setTimeout(() => { label.textContent = prev; btn.classList.remove('copied'); }, 1400);
+    }
   }
 </script>
 {% endblock %}

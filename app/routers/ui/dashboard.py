@@ -13,20 +13,20 @@ from app.jinja import templates
 from app.models import Project, User
 from app.models.project import TRASH_RETENTION_DAYS
 from app.routers.ui.import_project import render_import_prompt
+from app.utils.activity import log_event
+from app.utils.projects import decorate
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/", response_class=HTMLResponse)
-def dashboard(
-    request: Request,
-    q: str = "",
-    status: str = "",
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> HTMLResponse:
-    base_query = db.query(Project).filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
+def _build_dashboard_context(q: str, status: str, db: Session, user: User) -> dict:
+    """Contexto compartido por la página y el endpoint de cards (HTMX).
+
+    Decora cada proyecto (actividad, comando de inicio, link de prod) y arma la
+    lista 'recientes' (activos por última actualización) que pide el diseño.
+    """
+    base_query = db.query(Project).filter(Project.user_id == user.id, Project.deleted_at.is_(None))
     if q:
         like = f"%{q}%"
         base_query = base_query.filter(
@@ -38,27 +38,51 @@ def dashboard(
 
     all_projects = base_query.all()
     status_counts = {
-        "all": len(all_projects),
+        "all": sum(1 for p in all_projects if p.status != "archived"),
         "active": sum(1 for p in all_projects if p.status == "active"),
         "paused": sum(1 for p in all_projects if p.status == "paused"),
         "archived": sum(1 for p in all_projects if p.status == "archived"),
     }
 
-    projects = [p for p in all_projects if not status or p.status == status]
-    projects.sort(key=lambda p: p.name)
+    # Filtro: "todos" oculta archivados (como el diseño); un status explícito filtra.
+    if status:
+        visible = [p for p in all_projects if p.status == status]
+    else:
+        visible = [p for p in all_projects if p.status != "archived"]
 
-    return templates.TemplateResponse(
-        "dashboard/index.html",
-        {
-            "request": request,
-            "projects": projects,
-            "q": q,
-            "status_filter": status,
-            "status_counts": status_counts,
-            "import_prompt": render_import_prompt(),
-            "current_user": current_user,
-        },
-    )
+    # Orden por actividad (lo más reciente primero) para que el dashboard sea
+    # "mission control" por recencia, no alfabético.
+    visible.sort(key=lambda p: p.updated_at or p.created_at, reverse=True)
+    projects = [decorate(p) for p in visible]
+
+    # Recientes: hasta 3 proyectos activos tocados últimamente. Solo cuando no
+    # hay búsqueda/filtro activo, para no competir con los resultados.
+    recent: list = []
+    if not q and not status:
+        recent = [pv for pv in projects if pv.project.status == "active"][:3]
+
+    return {
+        "projects": projects,
+        "recent": recent,
+        "q": q,
+        "status_filter": status,
+        "status_counts": status_counts,
+        "current_user": user,
+    }
+
+
+@router.get("/", response_class=HTMLResponse)
+def dashboard(
+    request: Request,
+    q: str = "",
+    status: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    context = _build_dashboard_context(q, status, db, current_user)
+    context["request"] = request
+    context["import_prompt"] = render_import_prompt()
+    return templates.TemplateResponse("dashboard/index.html", context)
 
 
 @router.get("/projects/trash", response_class=HTMLResponse)
@@ -171,6 +195,7 @@ def project_edit_save(
     project.status = status if status in ("active", "paused", "archived") else "active"
     project.description = description or None
     project.tech_stack = [t.strip() for t in tech_stack_raw.split(",") if t.strip()]
+    log_event(db, project.id, "updated", "project")
     db.commit()
     logger.info("Proyecto editado desde dashboard: '%s'", slug)
     return Response(status_code=200, headers={"HX-Redirect": "/"})
@@ -206,6 +231,8 @@ def create_project_form(
         user_id=current_user.id,
     )
     db.add(project)
+    db.flush()
+    log_event(db, project.id, "created", "project")
     db.commit()
     logger.info("Proyecto creado desde UI: '%s'", project.slug)
     if request.headers.get("HX-Request"):
@@ -221,37 +248,9 @@ def dashboard_cards(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    base_query = db.query(Project).filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
-    if q:
-        like = f"%{q}%"
-        base_query = base_query.filter(
-            Project.name.ilike(like)
-            | Project.description.ilike(like)
-            | Project.notes.ilike(like)
-            | cast(Project.tech_stack, Text).ilike(like)
-        )
-
-    all_projects = base_query.all()
-    status_counts = {
-        "all": len(all_projects),
-        "active": sum(1 for p in all_projects if p.status == "active"),
-        "paused": sum(1 for p in all_projects if p.status == "paused"),
-        "archived": sum(1 for p in all_projects if p.status == "archived"),
-    }
-
-    projects = [p for p in all_projects if not status or p.status == status]
-    projects.sort(key=lambda p: p.name)
-
-    return templates.TemplateResponse(
-        "partials/project_cards.html",
-        {
-            "request": request,
-            "projects": projects,
-            "status_counts": status_counts,
-            "status_filter": status,
-            "current_user": current_user,
-        },
-    )
+    context = _build_dashboard_context(q, status, db, current_user)
+    context["request"] = request
+    return templates.TemplateResponse("partials/project_cards.html", context)
 
 
 def _purge_expired_projects(db: Session) -> int:
