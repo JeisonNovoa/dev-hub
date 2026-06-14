@@ -18,6 +18,15 @@
         ".venv\\Scripts\\python -m http.server 4173 --directory extension"
       ],
       "port": 4173
+    },
+    {
+      "name": "static-preview",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": [
+        "-Command",
+        ".venv\\Scripts\\python -m http.server 4180 --directory app/static"
+      ],
+      "port": 4180
     }
   ]
 }

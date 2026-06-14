@@ -1,0 +1,246 @@
+{# Command palette global (⌘K / Ctrl+K).
+   Busca proyectos, credenciales, links y comandos desde cualquier página y
+   ejecuta la acción directa de cada resultado (navegar / abrir / copiar /
+   copiar contraseña). Resuelve los dos flujos diarios sin cambiar de contexto.
+
+   - ↑↓ navega · ↵ ejecuta · esc cierra · ⌘K abre/cierra
+   - Los secretos se piden a /api/search/credential/{id}/secret (acceso logueado);
+     nunca llegan al cliente hasta que el usuario los copia explícitamente. #}
+<div x-data="commandPalette()"
+     x-on:open-palette.window="open()"
+     x-on:keydown.window.prevent.cmd.k="toggle()"
+     x-on:keydown.window.prevent.ctrl.k="toggle()">
+
+  <template x-if="isOpen">
+    <div class="fixed inset-0 z-[80] flex items-start justify-center pt-[12vh] px-4"
+         x-on:keydown.escape.window="close()">
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-[3px]"
+           x-transition:enter="transition ease-out duration-150"
+           x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+           @click="close()"></div>
+
+      <!-- Panel -->
+      <div class="relative w-[600px] max-w-full bg-surface-card border border-surface-border rounded-2xl shadow-2xl overflow-hidden"
+           x-transition:enter="transition ease-out duration-150"
+           x-transition:enter-start="opacity-0 -translate-y-2 scale-[0.98]"
+           x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+           @click.stop>
+
+        <!-- Input -->
+        <div class="flex items-center gap-3 px-[18px] py-[15px] border-b border-surface-border">
+          <svg class="w-[18px] h-[18px] text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7" stroke-width="2"></circle>
+            <path stroke-linecap="round" stroke-width="2" d="M21 21l-4.3-4.3"></path>
+          </svg>
+          <input x-ref="input" x-model="query" @input="onInput()"
+                 @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
+                 @keydown.enter.prevent="runActive()"
+                 type="text" autocomplete="off" spellcheck="false"
+                 placeholder="Busca un proyecto, credencial o link — o copia un comando…"
+                 class="flex-1 bg-transparent border-none outline-none text-[15px] text-gray-100 placeholder-gray-500" />
+          <span class="font-mono text-[10px] text-gray-500 border border-surface-border rounded-[5px] px-1.5 py-0.5 cursor-pointer" @click="close()">esc</span>
+        </div>
+
+        <!-- Resultados -->
+        <div class="max-h-[360px] overflow-y-auto p-2" x-ref="list">
+          <!-- Estado inicial / vacío -->
+          <template x-if="!query.trim()">
+            <p class="px-3 py-6 text-center text-[13px] text-gray-500">
+              Escribe para buscar en proyectos, credenciales, links y comandos.
+            </p>
+          </template>
+          <template x-if="query.trim() && !loading && flat.length === 0">
+            <p class="px-3 py-6 text-center text-[13px] text-gray-500">
+              Sin resultados para <span class="font-mono text-gray-400" x-text="'&quot;' + query.trim() + '&quot;'"></span>
+            </p>
+          </template>
+          <template x-if="loading && flat.length === 0">
+            <p class="px-3 py-6 text-center text-[13px] text-gray-500">Buscando…</p>
+          </template>
+
+          <!-- Grupos -->
+          <template x-for="group in groups" :key="group.label">
+            <div>
+              <p class="font-mono text-[9px] tracking-[0.14em] uppercase text-gray-600 mx-2.5 mt-2 mb-1" x-text="group.label"></p>
+              <template x-for="item in group.items" :key="item._i">
+                <div @click="run(item)" @mousemove="active = item._i"
+                     class="flex items-center gap-[11px] px-[11px] py-2.5 rounded-[9px] cursor-pointer transition-colors"
+                     :class="active === item._i ? 'bg-accent/10 border border-accent/25' : 'border border-transparent'">
+                  <!-- marcador por tipo -->
+                  <span class="shrink-0 w-[7px] h-[7px]"
+                        :class="{
+                          'rounded-[2px] bg-accent': item.type === 'link',
+                          'rounded-full bg-purple-400/80': item.type === 'credential',
+                          'rounded-full bg-accent': item.type === 'project',
+                        }"
+                        x-show="item.type !== 'command'"></span>
+                  <span x-show="item.type === 'command'" class="shrink-0 font-mono text-[11px] text-gray-500">$</span>
+
+                  <span class="text-[13.5px] shrink-0 max-w-[45%] truncate"
+                        :class="active === item._i ? 'text-gray-100' : 'text-gray-300'"
+                        x-text="item.title"></span>
+                  <span class="font-mono text-[10.5px] text-gray-500 truncate" x-text="item.subtitle"></span>
+                  <span class="ml-auto font-mono text-[10px] shrink-0 pl-2"
+                        :class="active === item._i ? 'text-accent' : 'text-gray-600'"
+                        x-text="hint(item)"></span>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+
+        <!-- Pie -->
+        <div class="flex items-center gap-4 px-[18px] py-2.5 border-t border-surface-border bg-surface/40">
+          <span class="font-mono text-[10px] text-gray-600">↑↓ navegar</span>
+          <span class="font-mono text-[10px] text-gray-600">↵ acción</span>
+          <span class="ml-auto font-mono text-[10px] text-gray-600">proyectos · credenciales · links · comandos</span>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Toast del palette -->
+  <div x-show="toast" x-cloak x-transition.opacity
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-2.5 bg-surface-card border border-accent/40 rounded-xl px-4 py-2.5 shadow-lg pointer-events-none">
+    <svg class="w-4 h-4 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 13l4 4L19 7" />
+    </svg>
+    <span class="text-[13.5px] text-gray-100" x-text="toast"></span>
+  </div>
+</div>
+
+<script>
+  function commandPalette() {
+    return {
+      isOpen: false,
+      query: '',
+      groups: [],
+      flat: [],      // items aplanados para navegar con flechas
+      active: 0,
+      loading: false,
+      toast: '',
+      _debounce: null,
+      _toastTimer: null,
+      _seq: 0,        // descarta respuestas viejas si el usuario sigue tecleando
+
+      open() {
+        this.isOpen = true;
+        this.$nextTick(() => this.$refs.input && this.$refs.input.focus());
+      },
+      close() {
+        this.isOpen = false;
+        this.query = '';
+        this.groups = [];
+        this.flat = [];
+        this.active = 0;
+      },
+      toggle() { this.isOpen ? this.close() : this.open(); },
+
+      onInput() {
+        clearTimeout(this._debounce);
+        const q = this.query;
+        if (!q.trim()) { this.groups = []; this.flat = []; this.loading = false; return; }
+        this.loading = true;
+        this._debounce = setTimeout(() => this.search(q), 200);
+      },
+
+      async search(q) {
+        const seq = ++this._seq;
+        try {
+          const res = await fetch('/api/search?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } });
+          const data = await res.json();
+          if (seq !== this._seq) return; // llegó una respuesta más nueva
+          // Aplanar para navegación, conservando el grupo.
+          let i = 0;
+          const groups = (data.groups || []).map((g) => ({
+            label: g.label,
+            items: g.items.map((it) => ({ ...it, _i: i++ })),
+          }));
+          this.groups = groups;
+          this.flat = groups.flatMap((g) => g.items);
+          this.active = 0;
+        } catch (_) {
+          this.groups = []; this.flat = [];
+        } finally {
+          if (seq === this._seq) this.loading = false;
+        }
+      },
+
+      move(delta) {
+        if (!this.flat.length) return;
+        this.active = (this.active + delta + this.flat.length) % this.flat.length;
+        this.$nextTick(() => {
+          const el = this.$refs.list && this.$refs.list.querySelector('.bg-accent\\/10');
+          if (el) el.scrollIntoView({ block: 'nearest' });
+        });
+      },
+
+      hint(item) {
+        if (item.action === 'navigate') return '↵ ir';
+        if (item.action === 'open') return '↵ abrir';
+        if (item.action === 'copy') return '↵ copiar';
+        if (item.action === 'copy-secret') return item.hasPassword ? '↵ copiar pwd' : '↵ ver';
+        return '↵';
+      },
+
+      runActive() {
+        const item = this.flat[this.active];
+        if (item) this.run(item);
+      },
+
+      async run(item) {
+        if (item.action === 'navigate') {
+          window.location.href = item.href;
+          return;
+        }
+        if (item.action === 'open') {
+          window.open(item.href, '_blank', 'noopener');
+          this.showToast('Abriendo ' + item.title);
+          this.close();
+          return;
+        }
+        if (item.action === 'copy') {
+          await this.copy(item.value || '');
+          this.showToast('Comando copiado');
+          this.close();
+          return;
+        }
+        if (item.action === 'copy-secret') {
+          if (!item.hasPassword) {
+            // OAuth o sin contraseña: llevar al detalle de la credencial.
+            window.location.href = item.href;
+            return;
+          }
+          try {
+            const res = await fetch('/api/search/credential/' + item.credId + '/secret?field=password', { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || 'error');
+            await this.copy(data.value || '');
+            this.showToast('Contraseña de ' + item.title + ' copiada');
+          } catch (_) {
+            this.showToast('No se pudo copiar la contraseña');
+          }
+          this.close();
+          return;
+        }
+      },
+
+      async copy(text) {
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch (_) {
+          const ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); ta.remove();
+        }
+      },
+
+      showToast(msg) {
+        this.toast = msg;
+        clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => { this.toast = ''; }, 1900);
+      },
+    };
+  }
+</script>
