@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from slugify import slugify
@@ -6,9 +8,21 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user, get_project_or_404
 from app.jinja import templates
-from app.models import Command, Credential, EnvVariable, QuickLink, Repo, Service, User
+from app.models import Command, Credential, EnvVariable, ProjectEvent, QuickLink, Repo, Service, User
+from app.utils.activity import log_event
+from app.utils.projects import primary_link
 
 router = APIRouter()
+
+# Una credencial se considera "sin rotar" si no se ha tocado en este lapso.
+_CREDENTIAL_STALE_DAYS = 180
+
+
+def _is_stale(moment: datetime | None) -> bool:
+    if moment is None:
+        return False
+    aware = moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - aware > timedelta(days=_CREDENTIAL_STALE_DAYS)
 
 
 @router.get("/projects/{slug}", response_class=HTMLResponse)
@@ -30,6 +44,26 @@ def project_detail(
         .order_by(Service.category, Service.name)
         .all()
     )
+
+    # Comando de inicio para el bloque "lanzar" (primer command type='start' a nivel proyecto).
+    start_cmds = sorted(commands_by_type.get("start", []), key=lambda c: c.order)
+    start_command = start_cmds[0].command if start_cmds else None
+
+    # Link primario (prod > staging > dashboard…) para abrir rápido desde el header.
+    primary = primary_link(project)
+
+    # Actividad reciente (timeline). Cada evento ya trae su resumen formado.
+    events = (
+        db.query(ProjectEvent)
+        .filter(ProjectEvent.project_id == project.id)
+        .order_by(ProjectEvent.created_at.desc())
+        .limit(8)
+        .all()
+    )
+
+    # Higiene: credenciales del proyecto sin rotar (sin cambios) hace > 180 días.
+    stale_creds = [c for c in project.credentials if c.password and _is_stale(c.updated_at)]
+
     return templates.TemplateResponse(
         "project/detail.html",
         {
@@ -38,6 +72,10 @@ def project_detail(
             "commands_by_type": commands_by_type,
             "project_env_vars": project_env_vars,
             "global_services": global_services,
+            "start_command": start_command,
+            "primary_link": primary,
+            "events": events,
+            "stale_creds": stale_creds,
             "current_user": current_user,
         },
     )
@@ -71,6 +109,7 @@ def env_var_new_submit(
         description=description or None,
     )
     db.add(env_var)
+    log_event(db, project.id, "created", "env_var", key)
     db.commit()
     db.refresh(env_var)
     return templates.TemplateResponse(
@@ -106,6 +145,7 @@ def command_new_submit(
     project = get_project_or_404(slug, db, current_user)
     cmd = Command(project_id=project.id, label=label, command=command, order=order, type=type)
     db.add(cmd)
+    log_event(db, project.id, "created", "command", label)
     db.commit()
     db.refresh(cmd)
     return templates.TemplateResponse(
@@ -135,6 +175,7 @@ def link_new_submit(
     project = get_project_or_404(slug, db, current_user)
     link = QuickLink(project_id=project.id, label=label, url=url, category=category)
     db.add(link)
+    log_event(db, project.id, "created", "link", label)
     db.commit()
     db.refresh(link)
     return templates.TemplateResponse(
@@ -277,6 +318,7 @@ def service_new_submit(
         notes=notes or None,
     )
     db.add(service)
+    log_event(db, project.id, "created", "service", name)
     db.commit()
     db.refresh(service)
     return templates.TemplateResponse(
@@ -359,6 +401,7 @@ def project_header_save(
     project.name = name
     project.description = description or None
     project.tech_stack = [t.strip() for t in tech_stack_raw.split(",") if t.strip()]
+    log_event(db, project.id, "updated", "project")
     db.commit()
     db.refresh(project)
     return templates.TemplateResponse(
@@ -445,6 +488,7 @@ def repo_new_submit(
         description=description or None,
     )
     db.add(repo)
+    log_event(db, project.id, "created", "repo", name)
     db.commit()
     db.refresh(repo)
     return templates.TemplateResponse(
@@ -513,6 +557,7 @@ def repo_command_new_submit(
         raise HTTPException(status_code=404)
     cmd = Command(project_id=project.id, repo_id=repo.id, label=label, command=command, order=order, type=type)
     db.add(cmd)
+    log_event(db, project.id, "created", "command", f"{repo.name} · {label}")
     db.commit()
     db.refresh(cmd)
     return templates.TemplateResponse(
@@ -555,6 +600,7 @@ def credential_new_submit(
         category="project",
     )
     db.add(cred)
+    log_event(db, project.id, "created", "credential", label)
     db.commit()
     db.refresh(cred)
     return templates.TemplateResponse(
@@ -603,6 +649,7 @@ def credential_save(
     cred.url = url or None
     cred.login_via = login_via
     cred.notes = notes or None
+    log_event(db, project.id, "updated", "credential", label)
     db.commit()
     db.refresh(cred)
     return templates.TemplateResponse(
@@ -660,6 +707,7 @@ def repo_env_var_new_submit(
         description=description or None,
     )
     db.add(env_var)
+    log_event(db, project.id, "created", "env_var", f"{repo.name} · {key}")
     db.commit()
     db.refresh(env_var)
     return templates.TemplateResponse(

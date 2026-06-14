@@ -3,53 +3,171 @@
 {% block title %}{{ project.name }} — Dev Hub{% endblock %}
 
 {% block content %}
+{% set total_proj_cmds = commands_by_type.values() | map('length') | sum %}
+{% set total_cmds_env = total_proj_cmds + (project_env_vars | length) %}
+{% set total_accesos = (project.services | length) + (project.credentials | length) %}
 
-<!-- Breadcrumb -->
-<div class="flex items-center gap-2 text-sm font-mono mb-6 border-b border-surface-border pb-4 -mt-2 min-w-0">
-  <a href="/" class="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-colors shrink-0">
-    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-    </svg>
-    proyectos/
-  </a>
-  <span class="text-gray-600 shrink-0">/</span>
-  <span class="text-accent truncate" title="{{ project.name }}">{{ project.name }}</span>
-</div>
+<div x-data="{ tab: 'resumen', repoCtx: 0 }">
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-[12.5px] font-mono mb-[18px] min-w-0">
+    <a href="/" class="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-colors shrink-0">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      proyectos
+    </a>
+    <span class="text-gray-700 shrink-0">/</span>
+    <span class="text-accent truncate" title="{{ project.name }}">{{ project.name }}</span>
+  </div>
 
-  <!-- ══ Columna izquierda (2/3) ══ -->
-  <div class="lg:col-span-2 space-y-5">
-
-    <!-- Header card del proyecto -->
+  <!-- ══════════ BLOQUE LAUNCH (header + lanzar) ══════════ -->
+  <div id="launch-block" class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-2xl overflow-hidden mb-[22px]">
     {% include "project/partials/project_header.html" %}
 
+    <!-- lanzar: comando de inicio + links -->
+    {% if start_command or project.links %}
+    <div class="border-t border-surface-border bg-surface/40 px-6 py-[18px] flex gap-6 flex-wrap items-end">
+      {% if start_command %}
+      <div class="flex-1 min-w-[300px]">
+        <p class="text-[9.5px] font-mono uppercase tracking-[0.16em] text-gray-600 mb-[7px] ml-0.5">lanzar · comando de inicio</p>
+        <div class="bg-surface border border-surface-border rounded-[10px] flex items-center gap-2.5 pl-3 pr-2 py-2.5">
+          <span class="font-mono text-xs text-gray-600 shrink-0">$</span>
+          <code class="font-mono text-xs text-gray-300 flex-1 min-w-0 overflow-x-auto whitespace-nowrap">{{ start_command }}</code>
+          <button type="button"
+                  data-copy="{{ start_command | e }}"
+                  data-copy-label="Comando de inicio copiado"
+                  onclick="copyText(this, event)"
+                  class="copy-btn flex items-center gap-1.5 font-mono text-[11px] font-semibold text-black bg-accent rounded-md px-3 py-1.5 hover:bg-accent-dim transition-colors shrink-0 whitespace-nowrap">
+            <svg class="copy-icon w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span class="copy-text">start</span>
+          </button>
+        </div>
+      </div>
+      {% endif %}
+      {% if project.links %}
+      <div class="min-w-0">
+        <p class="text-[9.5px] font-mono uppercase tracking-[0.16em] text-gray-600 mb-[7px] ml-0.5">links</p>
+        <div class="flex flex-wrap gap-2">
+          {% set link_styles = {
+            'prod': 'bg-accent/10 border-accent/30 text-accent',
+            'staging': 'bg-yellow-500/10 border-yellow-500/25 text-yellow-400',
+            'dashboard': 'bg-blue-500/10 border-blue-500/25 text-blue-300',
+            'docs': 'bg-purple-500/10 border-purple-500/25 text-purple-300',
+            'repo': 'bg-surface border-surface-border text-gray-300',
+            'other': 'bg-surface border-surface-border text-gray-300',
+          } %}
+          {% for link in project.links %}
+          <a href="{{ link.url }}" target="_blank" rel="noopener" title="{{ link.url }}"
+             class="inline-flex items-center gap-2 border rounded-[9px] px-3 py-2 hover:-translate-y-0.5 transition-transform {{ link_styles.get(link.category, link_styles['other']) }}">
+            <span class="w-1.5 h-1.5 rounded-full bg-current opacity-80"></span>
+            <span class="font-mono text-[12.5px]">{{ link.label }}</span>
+            <svg class="w-3 h-3 opacity-65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ══════════ PESTAÑAS ══════════ -->
+  {% set tab_base = 'inline-flex items-center gap-2 border-b-2 text-[13.5px] font-medium px-3.5 py-3 cursor-pointer whitespace-nowrap transition-colors' %}
+  <div class="flex items-center gap-1 border-b border-surface-border mb-6 overflow-x-auto">
+    <button @click="tab = 'resumen'" :class="tab === 'resumen' ? 'border-accent text-gray-100' : 'border-transparent text-gray-500 hover:text-gray-300'" class="{{ tab_base }}">Resumen</button>
+    <button @click="tab = 'cmds'" :class="tab === 'cmds' ? 'border-accent text-gray-100' : 'border-transparent text-gray-500 hover:text-gray-300'" class="{{ tab_base }}">
+      Comandos &amp; Env
+      <span class="font-mono text-[10px] text-gray-600 border border-surface-border rounded px-1.5">{{ total_cmds_env }}</span>
+    </button>
+    <button @click="tab = 'repos'" :class="tab === 'repos' ? 'border-accent text-gray-100' : 'border-transparent text-gray-500 hover:text-gray-300'" class="{{ tab_base }}">
+      Repos
+      <span class="font-mono text-[10px] text-gray-600 border border-surface-border rounded px-1.5">{{ project.repos | length }}</span>
+    </button>
+    <button @click="tab = 'accesos'" :class="tab === 'accesos' ? 'border-accent text-gray-100' : 'border-transparent text-gray-500 hover:text-gray-300'" class="{{ tab_base }}">
+      Accesos
+      <span class="font-mono text-[10px] text-gray-600 border border-surface-border rounded px-1.5">{{ total_accesos }}</span>
+    </button>
+  </div>
+
+  <!-- ░░ TAB: RESUMEN ░░ -->
+  <div x-show="tab === 'resumen'" x-transition.opacity class="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5 items-start">
+    <!-- Notas -->
+    {% include "project/partials/notes_view.html" %}
+
+    <div class="flex flex-col gap-5">
+      <!-- De un vistazo -->
+      <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden">
+        <div class="px-5 py-3 border-b border-surface-border">
+          <span class="text-[11px] font-mono font-semibold uppercase tracking-widest text-gray-500">de un vistazo</span>
+        </div>
+        <div class="px-2 py-1.5">
+          {% for label, value in [
+            ('Repositorios', project.repos | length),
+            ('Comandos', project.commands | length),
+            ('Variables de entorno', project.env_vars | length),
+            ('Links', project.links | length),
+            ('Servicios', project.services | length),
+            ('Credenciales', project.credentials | length),
+          ] %}
+          <div class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors">
+            <span class="text-[13px] text-gray-400">{{ label }}</span>
+            <span class="font-mono text-[13px] font-semibold text-gray-100">{{ value }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- Actividad -->
+      <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden">
+        <div class="px-5 py-3 border-b border-surface-border">
+          <span class="text-[11px] font-mono font-semibold uppercase tracking-widest text-gray-500">actividad</span>
+        </div>
+        <div class="px-5 py-4 flex flex-col gap-3.5">
+          {% for ev in events %}
+          <div class="flex items-start gap-3">
+            <span class="w-1.5 h-1.5 rounded-full mt-[6px] shrink-0 {{ ev.entity | event_dot }}"></span>
+            <div class="min-w-0">
+              <p class="text-[13px] text-gray-300 leading-snug">{{ ev.summary }}</p>
+              <p class="font-mono text-[10.5px] text-gray-600 mt-0.5">{{ ev.created_at | relative_time }}</p>
+            </div>
+          </div>
+          {% else %}
+          <p class="text-xs text-gray-600 font-mono text-center py-3">Sin actividad registrada aún.</p>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ░░ TAB: COMANDOS & ENV ░░ -->
+  <div x-show="tab === 'cmds'" x-transition.opacity x-cloak class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
     <!-- Comandos del proyecto -->
-    {% set total_proj_cmds = commands_by_type.values() | map('length') | sum %}
-    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
+    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden">
       <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
-        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
+        <h2 class="flex items-center gap-2 text-[11px] font-mono font-semibold text-gray-500 uppercase tracking-widest">
           <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-              d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          comandos
-          {% if total_proj_cmds %}
-          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-surface-border text-gray-600 font-mono">{{ total_proj_cmds }}</span>
-          {% endif %}
+          comandos del proyecto
         </h2>
+        <span class="font-mono text-[10px] text-gray-600">a nivel proyecto · no de repo</span>
       </div>
       {% for type_name, type_label in [('start','inicio'), ('migration','migración'), ('build','build'), ('other','otros')] %}
       {% set cmds = commands_by_type.get(type_name, []) %}
       {% if cmds or type_name == 'start' %}
       <div class="border-b border-surface-border last:border-b-0">
         <div class="flex items-center justify-between px-5 py-2">
-          <span class="text-xs font-mono text-gray-600 uppercase tracking-widest">{{ type_label }}</span>
+          <span class="text-[10px] font-mono text-gray-600 uppercase tracking-widest">{{ type_label }}</span>
           <button
             hx-get="/ui/projects/{{ project.slug }}/commands/new?type={{ type_name }}"
             hx-target="#cmd-list-{{ type_name }}"
             hx-swap="beforeend"
-            class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
+            class="text-[10.5px] font-mono text-gray-600 hover:text-accent transition-colors">
             + agregar
           </button>
         </div>
@@ -67,23 +185,20 @@
     </section>
 
     <!-- Variables de entorno del proyecto -->
-    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
+    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden">
       <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
-        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
+        <h2 class="flex items-center gap-2 text-[11px] font-mono font-semibold text-gray-500 uppercase tracking-widest">
           <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
           </svg>
           variables de entorno
-          {% if project_env_vars %}
-          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-surface-border text-gray-600 font-mono">{{ project_env_vars | length }}</span>
-          {% endif %}
+          {% if project_env_vars %}<span class="text-gray-600">{{ project_env_vars | length }}</span>{% endif %}
         </h2>
         <button
           hx-get="/ui/projects/{{ project.slug }}/env-vars/new"
           hx-target="#env-vars-list"
           hx-swap="afterbegin"
-          class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
+          class="text-[10.5px] font-mono text-gray-600 hover:text-accent transition-colors">
           + agregar
         </button>
       </div>
@@ -93,292 +208,180 @@
         {% endfor %}
         {% if not project_env_vars %}
         <div class="px-5 py-4 flex items-center gap-2 text-xs text-gray-700">
-          <svg class="w-3.5 h-3.5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-          </svg>
           <span class="font-mono">sin variables de entorno aún.</span>
         </div>
         {% endif %}
       </div>
     </section>
-
-    <!-- Repositorios -->
-    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
-      <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
-        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
-          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-              d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-          </svg>
-          repositorios
-          {% if project.repos %}
-          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-surface-border text-gray-600 font-mono">{{ project.repos | length }}</span>
-          {% endif %}
-        </h2>
-        <button
-          hx-get="/ui/projects/{{ project.slug }}/repos/new"
-          hx-target="#repos-list"
-          hx-swap="afterbegin"
-          class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
-          + agregar
-        </button>
-      </div>
-      <div id="repos-list" class="divide-y divide-surface-border">
-        {% for repo in project.repos %}
-        {% include "project/partials/repo_card.html" %}
-        {% endfor %}
-        {% if not project.repos %}
-        <div id="repos-empty" class="flex flex-col items-center gap-3 py-10 text-center">
-          <svg class="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-          </svg>
-          <div>
-            <p class="text-sm text-gray-500">Sin repositorios aún</p>
-            <p class="text-xs text-gray-700 mt-0.5">Conecta repos para centralizar comandos y variables de entorno</p>
-          </div>
-          <button
-            hx-get="/ui/projects/{{ project.slug }}/repos/new"
-            hx-target="#repos-empty"
-            hx-swap="outerHTML"
-            class="text-xs font-mono px-3 py-1.5 rounded-lg bg-surface border border-surface-border text-accent hover:bg-surface-hover hover:border-accent/30 transition-colors">
-            + agregar repositorio
-          </button>
-        </div>
-        {% endif %}
-      </div>
-    </section>
-
-    <!-- Links rápidos agrupados por categoría -->
-    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
-      <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
-        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
-          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-          </svg>
-          links rápidos
-          {% if project.links %}
-          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-surface-border text-gray-600 font-mono">{{ project.links | length }}</span>
-          {% endif %}
-        </h2>
-        <button
-          hx-get="/ui/projects/{{ project.slug }}/links/new"
-          hx-target="#links-list"
-          hx-swap="afterbegin"
-          class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
-          + agregar
-        </button>
-      </div>
-      <div id="links-list" class="px-5 py-4 space-y-4">
-        {% if project.links %}
-          {% set seen_cats = [] %}
-          {% for link in project.links %}
-            {% if link.category not in seen_cats %}
-              {% if seen_cats %}
-              </div></div>
-              {% endif %}
-              <div>
-              <p class="text-xs font-mono text-gray-600 uppercase tracking-widest mb-2">{{ link.category }}</p>
-              <div class="flex flex-wrap gap-2" data-cat="{{ link.category }}">
-              {% set _ = seen_cats.append(link.category) %}
-            {% endif %}
-            {% include "project/partials/link_row.html" %}
-          {% endfor %}
-          {% if seen_cats %}
-          </div></div>
-          {% endif %}
-        {% else %}
-        <div id="links-empty" class="flex flex-col items-center gap-3 py-8 text-center">
-          <svg class="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-          </svg>
-          <div>
-            <p class="text-sm text-gray-500">Sin links aún</p>
-            <p class="text-xs text-gray-700 mt-0.5">Dashboard, staging, prod, docs — todo en un lugar</p>
-          </div>
-          <button
-            hx-get="/ui/projects/{{ project.slug }}/links/new"
-            hx-target="#links-empty"
-            hx-swap="outerHTML"
-            class="text-xs font-mono px-3 py-1.5 rounded-lg bg-surface border border-surface-border text-accent hover:bg-surface-hover hover:border-accent/30 transition-colors">
-            + agregar link
-          </button>
-        </div>
-        {% endif %}
-      </div>
-    </section>
-
-    <!-- Notas -->
-    {% include "project/partials/notes_view.html" %}
-
   </div>
 
-  <!-- ══ Columna derecha (1/3) ══ -->
-  <div class="space-y-5">
+  <!-- ░░ TAB: REPOS ░░ -->
+  <div x-show="tab === 'repos'" x-transition.opacity x-cloak>
+    {% if project.repos %}
+    <!-- Selector de contexto (repo activo) -->
+    <div class="flex items-center gap-3.5 mb-[18px] flex-wrap">
+      <span class="text-[10px] font-mono uppercase tracking-widest text-gray-600">contexto</span>
+      <div class="flex items-center gap-1 bg-surface-card border border-surface-border rounded-[10px] p-1">
+        {% for repo in project.repos %}
+        <button @click="repoCtx = {{ loop.index0 }}"
+                :class="repoCtx === {{ loop.index0 }} ? 'bg-surface text-gray-100' : 'text-gray-500 hover:text-gray-300'"
+                class="inline-flex items-center gap-2 font-mono text-[12.5px] rounded-md px-3 py-1.5 transition-colors whitespace-nowrap">
+          <span class="w-1.5 h-1.5 rounded-full bg-accent" :class="repoCtx === {{ loop.index0 }} ? '' : 'opacity-40'"></span>
+          {{ repo.name }}
+        </button>
+        {% endfor %}
+      </div>
+      <button
+        hx-get="/ui/projects/{{ project.slug }}/repos/new"
+        hx-target="#repos-list"
+        hx-swap="afterbegin"
+        class="text-[10.5px] font-mono text-gray-600 hover:text-accent transition-colors">
+        + agregar repo
+      </button>
+    </div>
 
-    <!-- Servicios (colapsable) -->
+    <!-- Cards de repo: solo se muestra el del contexto activo -->
+    <div id="repos-list">
+      {% for repo in project.repos %}
+      <div x-show="repoCtx === {{ loop.index0 }}" {% if not loop.first %}x-cloak{% endif %}>
+        {% include "project/partials/repo_card.html" %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div id="repos-list">
+      <div id="repos-empty" class="flex flex-col items-center gap-3 py-12 text-center bg-surface-card/60 border border-surface-border rounded-xl">
+        <svg class="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+        </svg>
+        <div>
+          <p class="text-sm text-gray-500">Sin repositorios aún</p>
+          <p class="text-xs text-gray-700 mt-0.5">Conecta repos para centralizar comandos y variables de entorno</p>
+        </div>
+        <button
+          hx-get="/ui/projects/{{ project.slug }}/repos/new"
+          hx-target="#repos-empty"
+          hx-swap="outerHTML"
+          class="text-xs font-mono px-3 py-1.5 rounded-lg bg-surface border border-surface-border text-accent hover:bg-surface-hover hover:border-accent/30 transition-colors">
+          + agregar repositorio
+        </button>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ░░ TAB: ACCESOS ░░ -->
+  <div x-show="tab === 'accesos'" x-transition.opacity x-cloak class="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-5 items-start">
+    <!-- Servicios -->
     {% set total_services = (project.services | length) + (global_services | length) %}
-    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm"
-             x-data="{ open: false }">
-      <div class="flex items-center justify-between px-5 py-3 cursor-pointer select-none hover:bg-surface-hover transition-colors"
-           :class="open ? 'border-b border-surface-border' : ''"
-           @click="open = !open">
-        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
-          <svg class="w-3 h-3 text-gray-600 transition-transform duration-200 shrink-0" :class="open ? 'rotate-90' : ''"
-               fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
+        <h2 class="flex items-center gap-2 text-[11px] font-mono font-semibold text-gray-500 uppercase tracking-widest">
+          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           servicios
-          {% if total_services %}
-          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-surface-border text-gray-600 font-mono">{{ total_services }}</span>
-          {% endif %}
         </h2>
-        <button x-show="open" @click.stop
-                hx-get="/ui/projects/{{ project.slug }}/services/new"
-                hx-target="#services-list"
-                hx-swap="afterbegin"
-                class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
+        <button
+          hx-get="/ui/projects/{{ project.slug }}/services/new"
+          hx-target="#services-list"
+          hx-swap="afterbegin"
+          class="text-[10.5px] font-mono text-gray-600 hover:text-accent transition-colors">
           + agregar
         </button>
       </div>
-      <div x-show="open" x-collapse>
-        <div class="px-4 py-4 space-y-4">
-
-          <!-- Servicios específicos del proyecto -->
-          {% if project.services %}
-          <div>
-            <p class="text-xs font-mono text-gray-600 uppercase tracking-widest mb-2 px-1">de este proyecto</p>
-            <div id="services-list" class="space-y-2">
-              {% for service in project.services %}
-              {% include "project/partials/service_row.html" %}
-              {% endfor %}
-            </div>
+      <div class="px-4 py-4 space-y-4">
+        <div>
+          <p class="text-[9.5px] font-mono uppercase tracking-widest text-gray-600 mb-2 px-1">de este proyecto</p>
+          <div id="services-list" class="space-y-2">
+            {% for service in project.services %}
+            {% include "project/partials/service_row.html" %}
+            {% endfor %}
           </div>
-          {% else %}
-          <div id="services-list" class="hidden"></div>
+          {% if not project.services %}
+          <p class="px-1 text-xs text-gray-700 font-mono">sin servicios de este proyecto.</p>
           {% endif %}
-
-          <!-- Servicios globales -->
-          {% if global_services %}
-          <div>
-            <p class="text-xs font-mono text-gray-600 uppercase tracking-widest mb-2 px-1">globales</p>
-            <div class="space-y-2">
-              {% for service in global_services %}
-              {% include "project/partials/service_row.html" %}
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
-
-          {% if not total_services %}
-          <div id="services-empty" class="flex flex-col items-center gap-3 py-6 text-center">
-            <svg class="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <div>
-              <p class="text-sm text-gray-500">Sin servicios vinculados</p>
-              <p class="text-xs text-gray-700 mt-0.5">OpenAI, Supabase, Vercel y más</p>
-            </div>
-            <button
-              hx-get="/ui/projects/{{ project.slug }}/services/new"
-              hx-target="#services-empty"
-              hx-swap="outerHTML"
-              class="text-xs font-mono px-3 py-1.5 rounded-lg bg-surface border border-surface-border text-accent hover:bg-surface-hover hover:border-accent/30 transition-colors">
-              + agregar servicio
-            </button>
-          </div>
-          {% endif %}
-
         </div>
+        {% if global_services %}
+        <div>
+          <p class="text-[9.5px] font-mono uppercase tracking-widest text-gray-600 mb-2 px-1">globales</p>
+          <div class="space-y-2">
+            {% for service in global_services %}
+            {% include "project/partials/service_row.html" %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
       </div>
     </section>
 
-    <!-- Credenciales (colapsable) -->
-    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm"
-             x-data="{ open: false }">
-      <div class="flex items-center justify-between px-5 py-3 cursor-pointer select-none hover:bg-surface-hover transition-colors"
-           :class="open ? 'border-b border-surface-border' : ''"
-           @click="open = !open">
-        <h2 class="flex items-center gap-2 text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">
-          <svg class="w-3 h-3 text-gray-600 transition-transform duration-200 shrink-0" :class="open ? 'rotate-90' : ''"
-               fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    <!-- Credenciales -->
+    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden"
+             x-data="{ credQuery: '' }">
+      <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-surface-border flex-wrap">
+        <h2 class="flex items-center gap-2 text-[11px] font-mono font-semibold text-gray-500 uppercase tracking-widest">
+          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
           </svg>
           credenciales
-          {% if project.credentials %}
-          <span class="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-surface-border text-gray-600 font-mono">{{ project.credentials | length }}</span>
-          {% endif %}
         </h2>
-        <button x-show="open" @click.stop
-                hx-get="/ui/projects/{{ project.slug }}/credentials/new"
-                hx-target="#proj-credentials-list"
-                hx-swap="afterbegin"
-                class="text-xs font-mono text-gray-600 hover:text-accent transition-colors">
-          + agregar
-        </button>
-      </div>
-      <div x-show="open" x-collapse>
-        <div class="px-4 py-3">
-          <div id="proj-credentials-list" class="px-3 py-3 space-y-3">
-            {% for cred in project.credentials %}
-            {% include "project/partials/credential_item.html" %}
-            {% endfor %}
-            {% if not project.credentials %}
-            <div id="creds-empty" class="flex flex-col items-center gap-3 py-8 text-center">
-              <svg class="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-              </svg>
-              <div>
-                <p class="text-sm text-gray-500">Sin credenciales vinculadas</p>
-                <p class="text-xs text-gray-700 mt-0.5">Asocia accesos de este proyecto en un lugar seguro</p>
-              </div>
-              <button
-                hx-get="/ui/projects/{{ project.slug }}/credentials/new"
-                hx-target="#creds-empty"
-                hx-swap="outerHTML"
-                class="text-xs font-mono px-3 py-1.5 rounded-lg bg-surface border border-surface-border text-accent hover:bg-surface-hover hover:border-accent/30 transition-colors">
-                + agregar credencial
-              </button>
-            </div>
-            {% endif %}
+        <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 bg-surface border border-surface-border rounded-lg px-2.5 py-1.5">
+            <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="7" stroke-width="2"></circle><path stroke-linecap="round" stroke-width="2" d="M21 21l-4.3-4.3"></path>
+            </svg>
+            <input x-model="credQuery" placeholder="buscar credencial…"
+                   class="bg-transparent border-none outline-none font-mono text-xs text-gray-100 placeholder-gray-600 w-[130px]" />
           </div>
+          <button
+            hx-get="/ui/projects/{{ project.slug }}/credentials/new"
+            hx-target="#proj-credentials-list"
+            hx-swap="afterbegin"
+            class="text-[10.5px] font-mono text-gray-600 hover:text-accent transition-colors">
+            + agregar
+          </button>
         </div>
       </div>
-    </section>
 
-    <!-- Resumen -->
-    {% set total_cmds = project.commands | length %}
-    {% set total_envs = project.env_vars | length %}
-    {% set total_repos = project.repos | length %}
-    {% set total_links = project.links | length %}
-    {% set total_services = project.services | length %}
-    {% set total_creds = project.credentials | length %}
-    <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
-      <div class="px-5 py-3 border-b border-surface-border">
-        <h2 class="text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">resumen</h2>
-      </div>
-      <div class="px-3 py-3 grid grid-cols-2 gap-3">
-          {% for label, value, color in [
-            ('Repos', total_repos, 'text-blue-400'),
-            ('Comandos', total_cmds, 'text-green-400'),
-            ('Env vars', total_envs, 'text-yellow-400'),
-            ('Links', total_links, 'text-purple-400'),
-            ('Servicios', total_services, 'text-orange-400'),
-            ('Credenciales', total_creds, 'text-red-400'),
-          ] %}
-          <div class="px-4 py-3 bg-surface border border-surface-border rounded-lg">
-            <p class="text-2xl font-bold font-mono {{ color }}">{{ value }}</p>
-            <p class="text-xs text-gray-500 mt-0.5">{{ label }}</p>
+      <!-- Banner higiene (credenciales sin rotar) -->
+      {% if stale_creds %}
+      <a href="/credentials/higiene"
+         class="flex items-center gap-2.5 px-5 py-2.5 bg-yellow-500/[0.06] border-b border-surface-border hover:bg-yellow-500/10 transition-colors">
+        <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 shrink-0"></span>
+        <span class="text-xs text-gray-300">
+          Higiene: <span class="text-yellow-400">{{ stale_creds | length }} credencial{{ 'es' if stale_creds | length != 1 else '' }}</span> sin rotar hace +6 meses.
+        </span>
+        <span class="ml-auto font-mono text-[10.5px] text-gray-600 hover:text-yellow-400 whitespace-nowrap">revisar →</span>
+      </a>
+      {% endif %}
+
+      <div id="proj-credentials-list" class="px-4 py-3 space-y-3">
+        {% for cred in project.credentials %}
+        <div x-show="!credQuery || '{{ (cred.label ~ ' ' ~ (cred.username or '')) | lower | e }}'.includes(credQuery.toLowerCase())">
+          {% include "project/partials/credential_item.html" %}
+        </div>
+        {% endfor %}
+        {% if not project.credentials %}
+        <div id="creds-empty" class="flex flex-col items-center gap-3 py-8 text-center">
+          <svg class="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
+          <div>
+            <p class="text-sm text-gray-500">Sin credenciales vinculadas</p>
+            <p class="text-xs text-gray-700 mt-0.5">Asocia accesos de este proyecto en un lugar seguro</p>
           </div>
-          {% endfor %}
+          <button
+            hx-get="/ui/projects/{{ project.slug }}/credentials/new"
+            hx-target="#creds-empty"
+            hx-swap="outerHTML"
+            class="text-xs font-mono px-3 py-1.5 rounded-lg bg-surface border border-surface-border text-accent hover:bg-surface-hover hover:border-accent/30 transition-colors">
+            + agregar credencial
+          </button>
+        </div>
+        {% endif %}
       </div>
     </section>
-
   </div>
 
 </div>
