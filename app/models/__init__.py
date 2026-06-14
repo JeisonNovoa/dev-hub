@@ -5,6 +5,7 @@ from app.models.repo import Repo
 from app.models.service import Service
 from app.models.credential import Credential
 from app.models.extension_token import ExtensionToken
+from app.models.project_event import ProjectEvent
 
 __all__ = [
     "Base",
@@ -18,4 +19,5 @@ __all__ = [
     "Service",
     "Credential",
     "ExtensionToken",
+    "ProjectEvent",
 ]

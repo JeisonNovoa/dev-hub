@@ -5,6 +5,16 @@
 @layer base {
   [x-cloak] { display: none !important; }
 
+  /* Red de seguridad: los SVG de los enlaces del sidebar nunca deben crecer
+     aunque una clase de tamaño no cargue (p. ej. style.css cacheado). Los acota
+     a 20px para evitar el ícono gigante que rompe el layout. */
+  .app-sidebar nav a svg,
+  .app-sidebar a[href="/trash"] svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+
   /* Neutralizar fondo blanco del autofill del browser en todos los inputs */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
