@@ -41,6 +41,7 @@ const ICONS = {
   open: 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14',
   check: 'M5 13l4 4L19 7',
   dots: 'M12 5.5v.01M12 12v.01M12 18.5v.01',
+  user: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
 };
 
 function svgIcon(name) {
@@ -147,7 +148,7 @@ async function refresh() {
   }
   setBadge('activo', 'ok');
   $('vault-email').textContent = st.email || '';
-  $('vault-footer-status').title = `Conectado como ${st.email || ''} en ${st.apiUrl || ''}`;
+  $('vault-account-toggle').title = `Conectado como ${st.email || ''} en ${st.apiUrl || ''}`;
   showView('view-unlocked');
   const tick = () => {
     const ms = st.unlockedUntil - Date.now();
@@ -286,17 +287,19 @@ async function writeClipboard(text) {
 }
 
 function buildFavicon(cred) {
+  // Favicon real del dominio con inicial coloreada de respaldo (color rotado por
+  // id, como el diseño). Si el favicon no carga, queda la inicial.
   const fav = document.createElement('span');
-  fav.className = 'cred-favicon';
+  const colorClass = `c${(cred.id || 0) % 5}`;
+  fav.className = `cred-favicon ${colorClass}`;
   const letter = (cred.label || '?')[0].toUpperCase();
+  fav.textContent = letter;
   if (cred.domain) {
     const img = document.createElement('img');
     img.alt = '';
     img.src = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${cred.domain}&size=32`;
-    img.addEventListener('error', () => { fav.textContent = letter; });
-    fav.appendChild(img);
-  } else {
-    fav.textContent = letter;
+    img.addEventListener('load', () => { fav.textContent = ''; fav.appendChild(img); });
+    // Si falla, no se añade: la inicial coloreada ya está puesta.
   }
   return fav;
 }
@@ -371,9 +374,25 @@ async function copyPasswordFromPromise(secretPromise, btn) {
   }
 }
 
-function credRow(cred, { showFill = false } = {}) {
+// Copia la contraseña de una credencial y da feedback en btn. La contraseña se
+// pide al servidor en el momento del clic (gesto activo → clipboard confiable).
+function copyPassword(cred, btn) {
+  return copyPasswordFromPromise(send({ type: 'GET_SECRET', credId: cred.id }), btn);
+}
+
+// Rellena la pestaña activa con la credencial y cierra el popup.
+async function fillActiveTab(cred) {
+  const res = await send({ type: 'FILL_ACTIVE_TAB', credId: cred.id });
+  if (res.ok) window.close();
+  else showToast(res.error || 'No se pudo rellenar', 'error');
+}
+
+// fillVariant: en la sección "este sitio" añade un botón grande "rellenar"
+// (email) o "entrar" (OAuth) a la izquierda de las acciones.
+function credRow(cred, { fillVariant = false } = {}) {
   const row = document.createElement('div');
   row.className = 'cred-row';
+  row.tabIndex = -1;
 
   const fav = buildFavicon(cred);
 
@@ -396,48 +415,45 @@ function credRow(cred, { showFill = false } = {}) {
   const actions = document.createElement('div');
   actions.className = 'cred-actions';
 
-  // Solo los accesos con email+contraseña se pueden rellenar; los OAuth informan.
+  // Solo los accesos con email+contraseña tienen contraseña que copiar/rellenar;
+  // los OAuth (Google/GitHub…) informan y abren el flujo del proveedor.
   const isEmailLogin = !cred.login_via || cred.login_via === 'email';
 
-  if (showFill && isEmailLogin) {
+  // Sección "este sitio": botón grande rellenar / entrar.
+  if (fillVariant) {
     const fill = document.createElement('button');
-    fill.className = 'cred-action cred-fill';
-    fill.textContent = 'rellenar';
-    fill.title = 'Rellenar esta página';
-    fill.addEventListener('click', async () => {
-      const res = await send({ type: 'FILL_ACTIVE_TAB', credId: cred.id });
-      if (res.ok) window.close();
-    });
+    fill.className = isEmailLogin ? 'cred-fill' : 'cred-fill oauth';
+    fill.textContent = isEmailLogin ? 'rellenar' : 'entrar';
+    fill.title = isEmailLogin ? 'Rellenar esta página (Tab)' : 'Abrir acceso del proveedor';
+    fill.addEventListener('click', (e) => { e.stopPropagation(); fillActiveTab(cred); });
     actions.appendChild(fill);
   }
 
-  if (cred.url) {
-    const open = document.createElement('button');
-    open.className = 'cred-action';
-    open.title = 'Abrir sitio';
-    open.appendChild(svgIcon('open'));
-    open.addEventListener('click', () => chrome.tabs.create({ url: cred.url }));
-    actions.appendChild(open);
+  // Copiar usuario (siempre).
+  const copyUser = document.createElement('button');
+  copyUser.className = 'cred-action';
+  copyUser.title = 'Copiar usuario';
+  copyUser.appendChild(svgIcon('user'));
+  copyUser.addEventListener('click', (e) => { e.stopPropagation(); copyLocalValue(cred.username, copyUser); });
+  actions.appendChild(copyUser);
+
+  // Copiar contraseña (verde) o nota OAuth.
+  if (isEmailLogin) {
+    const copyPass = document.createElement('button');
+    copyPass.className = 'cred-action primary';
+    copyPass.title = 'Copiar contraseña (Enter)';
+    copyPass.appendChild(svgIcon('copy'));
+    copyPass.addEventListener('click', (e) => { e.stopPropagation(); copyPassword(cred, copyPass); });
+    actions.appendChild(copyPass);
+    row._copyPassBtn = copyPass; // para el atajo Enter
+  } else if (!fillVariant) {
+    const note = document.createElement('span');
+    note.className = 'cred-oauth-note';
+    note.textContent = 'OAuth';
+    actions.appendChild(note);
   }
 
-  const copy = document.createElement('button');
-  copy.className = 'cred-action';
-  copy.title = 'Copiar';
-  copy.appendChild(svgIcon('copy'));
-  copy.addEventListener('click', (e) => {
-    e.stopPropagation();
-    // El usuario ya está en la lista local (sin servidor). La contraseña se
-    // pide AHORA (al abrir el menú) para que al elegir la opción el valor ya
-    // esté disponible y se copie dentro del gesto del clic.
-    const options = [{ label: 'Copiar usuario', onClick: () => copyLocalValue(cred.username, copy) }];
-    if (isEmailLogin) {
-      const secretPromise = send({ type: 'GET_SECRET', credId: cred.id });
-      options.push({ label: 'Copiar contraseña', onClick: () => copyPasswordFromPromise(secretPromise, copy) });
-    }
-    openMenu(copy, options);
-  });
-  actions.appendChild(copy);
-
+  // Menú ⋮: editar / eliminar / abrir sitio.
   const more = document.createElement('button');
   more.className = 'cred-action';
   more.title = 'Más';
@@ -445,12 +461,8 @@ function credRow(cred, { showFill = false } = {}) {
   more.addEventListener('click', (e) => {
     e.stopPropagation();
     const options = [];
-    if (isEmailLogin) {
-      options.push({
-        label: 'Autocompletar esta página',
-        onClick: async () => { const r = await send({ type: 'FILL_ACTIVE_TAB', credId: cred.id }); if (r.ok) window.close(); },
-      });
-    }
+    if (cred.url) options.push({ label: 'Abrir sitio', onClick: () => chrome.tabs.create({ url: cred.url }) });
+    if (isEmailLogin) options.push({ label: 'Autocompletar esta página', onClick: () => fillActiveTab(cred) });
     options.push(
       { label: 'Editar', onClick: () => openForm(cred) },
       { label: 'Eliminar', danger: true, onClick: () => showDeleteConfirm(cred, row) },
@@ -458,6 +470,11 @@ function credRow(cred, { showFill = false } = {}) {
     openMenu(more, options);
   });
   actions.appendChild(more);
+
+  // Clic en la fila = copiar contraseña (acción principal del diseño).
+  row.addEventListener('click', () => {
+    if (isEmailLogin && row._copyPassBtn) copyPassword(cred, row._copyPassBtn);
+  });
 
   row.append(fav, info, actions);
   return row;
@@ -503,19 +520,53 @@ function skeletonRow() {
   return row;
 }
 
+let activeCategory = '';      // chip seleccionado
+let navRows = [];             // filas visibles en orden, para navegación ↑↓
+let navIndex = 0;             // fila activa por teclado
+
+function matchesSite(c) {
+  return c.domain && activeDomain && (c.domain === activeDomain || activeDomain.endsWith('.' + c.domain));
+}
+
 function renderVault(filter = '') {
   const q = filter.trim().toLowerCase();
-  const category = $('vault-category').value;
   const list = $('vault-list');
+  const siteList = $('vault-site-list');
   list.innerHTML = '';
+  siteList.innerHTML = '';
+  navRows = [];
 
   const filtered = allCreds.filter((c) => {
-    if (category && c.category !== category) return false;
+    if (activeCategory && c.category !== activeCategory) return false;
     if (!q) return true;
     return (c.label || '').toLowerCase().includes(q) || (c.username || '').toLowerCase().includes(q);
   });
 
-  $('vault-count').textContent = filtered.length ? `(${filtered.length})` : '';
+  // Sección "este sitio" primero (las que coinciden con la pestaña activa).
+  const siteMatches = filtered.filter(matchesSite);
+  const siteIds = new Set(siteMatches.map((c) => c.id));
+  const rest = filtered.filter((c) => !siteIds.has(c.id));
+
+  const siteBox = $('vault-site');
+  if (siteMatches.length) {
+    $('vault-site-domain').textContent = activeDomain;
+    siteMatches.forEach((c) => {
+      const row = credRow(c, { fillVariant: true });
+      siteList.appendChild(row);
+      navRows.push({ row, cred: c, isSite: true });
+    });
+    siteBox.hidden = false;
+  } else {
+    siteBox.hidden = true;
+  }
+
+  rest.forEach((c) => {
+    const row = credRow(c);
+    list.appendChild(row);
+    navRows.push({ row, cred: c, isSite: false });
+  });
+
+  $('vault-count').textContent = rest.length ? `(${rest.length})` : '';
   $('vault-empty').hidden = allCreds.length > 0;
   const noresults = $('vault-noresults');
   if (allCreds.length > 0 && filtered.length === 0) {
@@ -524,26 +575,21 @@ function renderVault(filter = '') {
   } else {
     noresults.hidden = true;
   }
-  filtered.forEach((c) => list.appendChild(credRow(c)));
 
-  // Sección "este sitio"
-  const siteBox = $('vault-site');
-  if (activeDomain) {
-    const matches = allCreds.filter(
-      (c) => c.domain && (c.domain === activeDomain || activeDomain.endsWith('.' + c.domain)),
-    );
-    if (matches.length) {
-      $('vault-site-domain').textContent = activeDomain;
-      const siteList = $('vault-site-list');
-      siteList.innerHTML = '';
-      matches.forEach((c) => siteList.appendChild(credRow(c, { showFill: true })));
-      siteBox.hidden = false;
-    } else {
-      siteBox.hidden = true;
-    }
-  } else {
-    siteBox.hidden = true;
-  }
+  // Reajusta la selección de teclado al nuevo conjunto.
+  navIndex = navRows.length ? Math.min(navIndex, navRows.length - 1) : 0;
+  highlightNav();
+}
+
+function highlightNav() {
+  navRows.forEach((n, i) => n.row.classList.toggle('active', i === navIndex));
+}
+
+function moveNav(delta) {
+  if (!navRows.length) return;
+  navIndex = Math.max(0, Math.min(navRows.length - 1, navIndex + delta));
+  highlightNav();
+  navRows[navIndex].row.scrollIntoView({ block: 'nearest' });
 }
 
 async function loadVault() {
@@ -584,14 +630,63 @@ async function loadVault() {
   }
 }
 
-$('vault-search').addEventListener('input', (e) => renderVault(e.target.value));
-$('vault-category').addEventListener('change', () => renderVault($('vault-search').value));
+const vaultSearch = $('vault-search');
+vaultSearch.addEventListener('input', (e) => {
+  navIndex = 0;
+  $('vault-search-clear').hidden = !e.target.value;
+  renderVault(e.target.value);
+});
+$('vault-search-clear').addEventListener('click', () => {
+  vaultSearch.value = '';
+  $('vault-search-clear').hidden = true;
+  navIndex = 0;
+  renderVault('');
+  vaultSearch.focus();
+});
+
+// Chips de categoría
+$('vault-chips').addEventListener('click', (e) => {
+  const chip = e.target.closest('.vault-chip');
+  if (!chip) return;
+  activeCategory = chip.dataset.cat || '';
+  $('vault-chips').querySelectorAll('.vault-chip').forEach((c) => c.classList.toggle('active', c === chip));
+  navIndex = 0;
+  renderVault(vaultSearch.value);
+});
+
 $('vault-new').addEventListener('click', () => openForm(null));
 $('vault-empty-add').addEventListener('click', () => openForm(null));
+
+// Menú de cuenta (email → abrir web / cerrar sesión)
+$('vault-account-toggle').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const menu = $('vault-account-menu');
+  menu.hidden = !menu.hidden;
+  if (!menu.hidden) {
+    setTimeout(() => document.addEventListener('click', function close(ev) {
+      if (!$('vault-account').contains(ev.target)) { menu.hidden = true; document.removeEventListener('click', close); }
+    }), 0);
+  }
+});
 $('vault-open-web').addEventListener('click', () => {
   if (lastStatus?.apiUrl) chrome.tabs.create({ url: lastStatus.apiUrl });
 });
-$('vault-open-web').appendChild(svgIcon('open'));
+
+// Navegación por teclado en la bóveda (solo cuando la vista está visible).
+document.addEventListener('keydown', (e) => {
+  if ($('view-unlocked').hidden) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); moveNav(1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); moveNav(-1); }
+  else if (e.key === 'Enter') {
+    const n = navRows[navIndex];
+    if (n && n.row._copyPassBtn) { e.preventDefault(); copyPassword(n.cred, n.row._copyPassBtn); }
+  } else if (e.key === 'Tab' && !e.shiftKey) {
+    const n = navRows[navIndex];
+    if (n && n.isSite) { e.preventDefault(); fillActiveTab(n.cred); }
+  } else if (e.key === 'Escape') {
+    if (vaultSearch.value) { e.preventDefault(); vaultSearch.value = ''; $('vault-search-clear').hidden = true; navIndex = 0; renderVault(''); }
+  }
+});
 
 // ─── Formulario (nueva / editar) ─────────────────────────────────────────────
 

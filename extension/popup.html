@@ -104,52 +104,89 @@
 
   <!-- Estado: desbloqueado — la bóveda -->
   <section id="view-unlocked" class="view vault" hidden>
-    <!-- Barra de acciones -->
-    <div class="vault-top">
-      <input id="vault-search" type="search" placeholder="Buscar…" class="vault-search" />
-      <button id="vault-open-web" class="icon-btn" title="Abrir Dev Hub en el navegador"></button>
-      <button id="vault-new" class="icon-btn" title="Nueva credencial">+</button>
-    </div>
-    <select id="vault-category" class="vault-filter" title="Filtrar por categoría">
-      <option value="">todas las categorías</option>
-      <option value="personal">personal</option>
-      <option value="work">trabajo</option>
-      <option value="project">proyecto</option>
-    </select>
-
-    <!-- Sección: este sitio (pestaña actual) -->
-    <div id="vault-site" hidden>
-      <p class="vault-section-title">Este sitio · <span id="vault-site-domain" class="mono"></span></p>
-      <div id="vault-site-list"></div>
-    </div>
-
-    <!-- Lista completa -->
-    <p class="vault-section-title">Todos los elementos <span id="vault-count" class="muted"></span></p>
-    <div id="vault-list" class="vault-list"></div>
-
-    <!-- Bóveda vacía -->
-    <div id="vault-empty" class="empty-state" hidden>
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-        <path stroke-linecap="round" stroke-linejoin="round"
-              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.74 5.74L9 18v3H6v-3l-3-3 4.26-4.26A6 6 0 0121 9z" />
-      </svg>
-      <p>Tu bóveda está vacía</p>
-      <button id="vault-empty-add" class="btn primary slim">Añadir credencial</button>
-    </div>
-    <p id="vault-noresults" class="muted small center" hidden></p>
-    <p id="vault-error" class="error" hidden></p>
-
-    <!-- Pie -->
-    <div class="vault-footer">
-      <span class="status-ok-inline" id="vault-footer-status" title="">
-        <span class="dot"></span>
-        <span id="vault-email" class="vault-email"></span>
+    <!-- Cabecera de la bóveda: estado + temporizador + bloquear -->
+    <div class="vault-head">
+      <span class="vault-badge"><span class="dot"></span>activo</span>
+      <span class="vault-timer" title="Tiempo hasta el bloqueo automático">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="9"></circle><path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2"></path>
+        </svg>
         <span id="unlock-remaining" class="mono"></span>
       </span>
-      <span class="vault-footer-actions">
-        <button id="lock-now" class="link-btn">Bloquear</button>
-        <button id="unlocked-logout" class="link-btn danger">Cerrar sesión</button>
-      </span>
+      <button id="lock-now" class="head-icon-btn" title="Bloquear ahora">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v2h8z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Buscador + nueva credencial -->
+    <div class="vault-search-row">
+      <div class="vault-search-wrap">
+        <svg class="vault-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"></circle><path stroke-linecap="round" d="M21 21l-4.3-4.3"></path>
+        </svg>
+        <input id="vault-search" type="search" placeholder="Buscar credencial…" class="vault-search" autocomplete="off" />
+        <button id="vault-search-clear" class="search-clear" title="Limpiar (Esc)" hidden>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+      <button id="vault-new" class="vault-new-btn" title="Nueva credencial">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m7-7H5"></path></svg>
+      </button>
+    </div>
+
+    <!-- Chips de categoría -->
+    <div class="vault-chips" id="vault-chips">
+      <button class="vault-chip active" data-cat="">todas</button>
+      <button class="vault-chip" data-cat="personal">personal</button>
+      <button class="vault-chip" data-cat="work">trabajo</button>
+      <button class="vault-chip" data-cat="project">proyecto</button>
+    </div>
+
+    <!-- Cuerpo desplazable -->
+    <div class="vault-body">
+      <!-- Sección: este sitio (pestaña actual) -->
+      <div id="vault-site" hidden>
+        <p class="vault-section-title site">este sitio · <span id="vault-site-domain" class="mono"></span></p>
+        <div id="vault-site-list"></div>
+      </div>
+
+      <!-- Lista completa -->
+      <p class="vault-section-title">todas <span id="vault-count" class="muted"></span></p>
+      <div id="vault-list" class="vault-list"></div>
+
+      <!-- Bóveda vacía -->
+      <div id="vault-empty" class="empty-state" hidden>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.74 5.74L9 18v3H6v-3l-3-3 4.26-4.26A6 6 0 0121 9z" />
+        </svg>
+        <p>Tu bóveda está vacía</p>
+        <button id="vault-empty-add" class="btn primary slim">Añadir credencial</button>
+      </div>
+      <p id="vault-noresults" class="muted small center" hidden></p>
+      <p id="vault-error" class="error" hidden></p>
+    </div>
+
+    <!-- Pie con hints de teclado -->
+    <div class="vault-footer">
+      <span class="kbd-hint"><kbd>↑↓</kbd> navegar</span>
+      <span class="kbd-hint accent"><kbd>↵</kbd> copiar pwd</span>
+      <span class="kbd-hint"><kbd>⇥</kbd> rellenar</span>
+    </div>
+
+    <!-- Menú de cuenta (email, abrir web, cerrar sesión) -->
+    <div class="vault-account">
+      <button id="vault-account-toggle" class="account-toggle" title="Cuenta">
+        <span class="account-dot"></span>
+        <span id="vault-email" class="vault-email"></span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div id="vault-account-menu" class="account-menu" hidden>
+        <button id="vault-open-web">Abrir Dev Hub en el navegador</button>
+        <button id="unlocked-logout" class="danger">Cerrar sesión</button>
+      </div>
     </div>
   </section>
 
