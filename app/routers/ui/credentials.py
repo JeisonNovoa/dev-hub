@@ -69,6 +69,27 @@ def credentials_page(
             "credentials/partials/credential_results.html",
             {"request": request, "credentials": credentials, "current_user": current_user},
         )
+
+    # Toda la bóveda (sin filtros) para los conteos por categoría y la higiene.
+    all_creds = (
+        db.query(Credential)
+        .filter(Credential.user_id == current_user.id, Credential.deleted_at.is_(None))
+        .all()
+    )
+    category_counts = {
+        "all": len(all_creds),
+        "work": sum(1 for c in all_creds if c.category == "work"),
+        "personal": sum(1 for c in all_creds if c.category == "personal"),
+        "project": sum(1 for c in all_creds if c.category == "project"),
+    }
+
+    # Resumen de higiene plegable (reusa el servicio). Las contraseñas se analizan
+    # en memoria; al template solo llegan los hallazgos, nunca las contraseñas.
+    from app.services.password_hygiene import analyze
+
+    report = analyze(all_creds)
+    stale = [c for c in all_creds if c.password and is_stale(c.updated_at)]
+
     trash_count = (
         db.query(Credential)
         .filter(Credential.user_id == current_user.id, Credential.deleted_at.isnot(None))
@@ -92,6 +113,9 @@ def credentials_page(
             "order": order,
             "trash_count": trash_count,
             "projects": projects,
+            "category_counts": category_counts,
+            "hygiene": report,
+            "stale_creds": stale,
             "current_user": current_user,
         },
     )
@@ -347,7 +371,18 @@ _SORT_COLS = {
     "label": Credential.label,
     "category": Credential.category,
     "created_at": Credential.created_at,
+    "updated_at": Credential.updated_at,
 }
+
+# Una credencial se considera "sin rotar" si no se ha tocado en este lapso.
+_CREDENTIAL_STALE_DAYS = 180
+
+
+def is_stale(moment: datetime | None) -> bool:
+    if moment is None:
+        return False
+    aware = moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - aware > timedelta(days=_CREDENTIAL_STALE_DAYS)
 
 
 def _query_credentials(
