@@ -10,11 +10,13 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.auth import verify_totp
+from app.auth import hash_password, verify_password, verify_totp
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.jinja import templates
 from app.models import User
+
+MIN_PASSWORD_LEN = 8
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -112,3 +114,61 @@ def totp_disable(
     db.commit()
     logger.info("2FA desactivado: user_id=%s", current_user.id)
     return _render(request, current_user, success="2FA desactivado.")
+
+
+# --- Cambio de contraseña de la cuenta ---
+
+@router.get("/ui/seguridad/password/form", response_class=HTMLResponse)
+def password_form(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "security/partials/password_form.html",
+        {"request": request, "current_user": current_user},
+    )
+
+
+@router.get("/ui/seguridad/password/cancel", response_class=HTMLResponse)
+def password_cancel(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    """Vuelve a mostrar la fila de contraseña en reposo (botón 'Cambiar')."""
+    return templates.TemplateResponse(
+        "security/partials/password_row.html",
+        {"request": request, "current_user": current_user},
+    )
+
+
+@router.post("/ui/seguridad/password/save", response_class=HTMLResponse)
+def password_save(
+    request: Request,
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    def fail(message: str) -> HTMLResponse:
+        return templates.TemplateResponse(
+            "security/partials/password_form.html",
+            {"request": request, "current_user": current_user, "error": message},
+        )
+
+    if not verify_password(current_password, current_user.hashed_password):
+        return fail("La contraseña actual no es correcta.")
+    if len(new_password) < MIN_PASSWORD_LEN:
+        return fail(f"La nueva contraseña debe tener al menos {MIN_PASSWORD_LEN} caracteres.")
+    if new_password != confirm_password:
+        return fail("La nueva contraseña y su confirmación no coinciden.")
+    if new_password == current_password:
+        return fail("La nueva contraseña debe ser distinta de la actual.")
+
+    current_user.hashed_password = hash_password(new_password)
+    db.commit()
+    logger.info("Contraseña de cuenta cambiada: user_id=%s", current_user.id)
+    return templates.TemplateResponse(
+        "security/partials/password_row.html",
+        {"request": request, "current_user": current_user, "success": "Contraseña actualizada."},
+    )

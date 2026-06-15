@@ -3,97 +3,155 @@
 {% block title %}Seguridad — Dev Hub{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-  <h1 class="text-lg font-mono font-semibold text-gray-100">seguridad/</h1>
-  <p class="text-sm text-gray-500 mt-1">Protección de tu cuenta Dev Hub.</p>
+<div class="mb-[22px]">
+  <h1 class="font-mono text-[22px] font-bold text-gray-100 tracking-tight">seguridad<span class="text-accent">/</span></h1>
+  <p class="text-[13.5px] text-gray-500 mt-1.5">Protección de tu cuenta y de la bóveda local de dev-hub.</p>
 </div>
 
-<div class="max-w-2xl space-y-5">
+<div class="max-w-[720px] flex flex-col gap-4">
 
   {% if error %}
-  <div class="px-4 py-3 rounded-lg bg-red-900/50 border border-red-700 text-red-300 text-sm">{{ error }}</div>
+  <div class="px-4 py-3 rounded-xl bg-red-900/40 border border-red-700/50 text-red-300 text-sm">{{ error }}</div>
   {% endif %}
   {% if success %}
-  <div class="px-4 py-3 rounded-lg bg-accent/10 border border-accent/40 text-accent text-sm">{{ success }}</div>
+  <div class="px-4 py-3 rounded-xl bg-accent/10 border border-accent/40 text-accent text-sm">{{ success }}</div>
   {% endif %}
 
-  <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
-    <div class="px-5 py-3 border-b border-surface-border flex items-center justify-between gap-3">
-      <h2 class="text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">verificación en dos pasos (2fa)</h2>
+  <!-- ░░ 2FA (hero) ░░ -->
+  <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-2xl overflow-hidden">
+    <div class="flex items-center justify-between gap-3 px-5 py-[15px] border-b border-surface-border flex-wrap">
+      <div class="flex items-center gap-3">
+        <span class="w-[30px] h-[30px] rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        </span>
+        <div>
+          <h2 class="text-[15px] font-semibold text-gray-100">Verificación en dos pasos</h2>
+          <p class="font-mono text-[10.5px] text-gray-500 mt-0.5">2fa · app de autenticación</p>
+        </div>
+      </div>
       {% if current_user.totp_enabled %}
-      <span class="text-xs px-2 py-0.5 rounded-full font-mono bg-accent/10 text-accent border border-accent/30">activo</span>
+      <span class="inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold text-accent bg-accent/10 border border-accent/30 rounded-full px-3 py-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-accent"></span>activo
+      </span>
+      {% elif qr_svg %}
+      <span class="inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold text-yellow-500 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-3 py-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>configurando
+      </span>
       {% else %}
-      <span class="text-xs px-2 py-0.5 rounded-full font-mono bg-surface border border-surface-border text-gray-600">inactivo</span>
+      <span class="inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold text-gray-500 bg-surface-solid border border-surface-border rounded-full px-3 py-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-gray-600"></span>inactivo
+      </span>
       {% endif %}
     </div>
 
-    <div class="px-5 py-4 space-y-4">
-
+    <div class="p-5">
       {% if current_user.totp_enabled %}
       <!-- Estado: activo -->
-      <p class="text-sm text-gray-400">
-        Tu cuenta pide un código de tu app de autenticación al iniciar sesión
-        (web y extensión). Activo desde {{ current_user.totp_confirmed_at.strftime('%Y-%m-%d') }}.
+      <p class="text-[13.5px] text-gray-400 leading-relaxed mb-4">
+        Tu cuenta pide un código de tu app de autenticación al iniciar sesión (web y extensión).
+        Activo desde <span class="font-mono text-gray-300">{{ current_user.totp_confirmed_at.strftime('%Y-%m-%d') }}</span>.
       </p>
-      <form method="post" action="/ui/seguridad/2fa/desactivar" class="flex flex-col sm:flex-row gap-2">
+      <form method="post" action="/ui/seguridad/2fa/desactivar" class="flex gap-2.5 items-center flex-wrap">
         <input name="code" type="text" inputmode="numeric" maxlength="6" required
                placeholder="código actual para desactivar"
-               class="flex-1 bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm font-mono text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+               class="flex-1 min-w-[220px] bg-surface border border-surface-border rounded-[9px] px-3 py-2.5 text-sm font-mono text-gray-100 placeholder-gray-600 focus:outline-none focus:border-red-500/50 transition-colors" />
         <button type="submit"
-                class="px-4 py-2 rounded-lg bg-red-900/30 border border-red-800/50 text-red-400 hover:bg-red-900/50 text-sm transition-colors shrink-0">
-          Desactivar 2FA
-        </button>
+                class="text-[13px] font-semibold text-red-300 bg-red-500/[0.12] border border-red-500/40 rounded-[9px] px-4 py-2.5 hover:bg-red-500/20 transition-colors whitespace-nowrap">Desactivar 2FA</button>
       </form>
 
       {% elif qr_svg %}
-      <!-- Estado: configurando (QR pendiente de confirmar) -->
-      <p class="text-sm text-gray-400">
-        <span class="text-accent font-mono">1.</span> Escanea este código con Google Authenticator,
-        Microsoft Authenticator, Aegis o similar:
-      </p>
-      <div class="flex justify-center">
-        <div class="bg-white rounded-xl p-3 w-44 h-44 [&>svg]:w-full [&>svg]:h-full">{{ qr_svg | safe }}</div>
+      <!-- Estado: configurando -->
+      <div class="grid grid-cols-1 sm:grid-cols-[188px_1fr] gap-6 items-start">
+        <div>
+          <p class="text-[13px] text-gray-400 leading-relaxed mb-3"><span class="font-mono text-accent">1.</span> Escanea el código con Google Authenticator, Aegis o similar:</p>
+          <div class="bg-white rounded-xl p-3 w-[164px] h-[164px] flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">{{ qr_svg | safe }}</div>
+          <p class="font-mono text-[10.5px] text-gray-500 mt-3 mb-0.5">o ingrésalo manual:</p>
+          <p class="font-mono text-xs text-gray-300 tracking-wide break-all">{{ manual_secret }}</p>
+        </div>
+        <div>
+          <p class="text-[13px] text-gray-400 leading-relaxed mb-3.5"><span class="font-mono text-accent">2.</span> Escribe el código de 6 dígitos que muestra la app:</p>
+          <form method="post" action="/ui/seguridad/2fa/confirmar" class="space-y-3.5">
+            <input name="code" type="text" inputmode="numeric" maxlength="6" required autofocus placeholder="123456"
+                   class="w-full bg-surface border border-surface-border rounded-[9px] px-3 py-2.5 text-base font-mono tracking-[0.3em] text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+            <div class="flex gap-2.5 items-center">
+              <button type="submit"
+                      class="inline-flex items-center gap-2 text-[13px] font-semibold text-black bg-accent rounded-[9px] px-4 py-2.5 hover:bg-accent-dim transition-colors">
+                <svg class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/></svg>
+                Confirmar y activar
+              </button>
+              <button type="submit" form="cancel-2fa" class="font-mono text-xs text-gray-500 hover:text-gray-300 transition-colors">cancelar configuración</button>
+            </div>
+          </form>
+          <form method="post" action="/ui/seguridad/2fa/cancelar" id="cancel-2fa"></form>
+        </div>
       </div>
-      <p class="text-xs text-gray-600 text-center font-mono break-all">
-        o ingrésalo manual: {{ manual_secret }}
-      </p>
-      <p class="text-sm text-gray-400">
-        <span class="text-accent font-mono">2.</span> Escribe el código de 6 dígitos que muestra la app:
-      </p>
-      <form method="post" action="/ui/seguridad/2fa/confirmar" class="flex flex-col sm:flex-row gap-2">
-        <input name="code" type="text" inputmode="numeric" maxlength="6" required autofocus
-               placeholder="123456"
-               class="flex-1 bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm font-mono text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
-        <button type="submit"
-                class="px-4 py-2 rounded-lg bg-accent text-black hover:bg-accent-dim text-sm font-semibold transition-colors shrink-0">
-          Confirmar y activar
-        </button>
-      </form>
-      <form method="post" action="/ui/seguridad/2fa/cancelar">
-        <button type="submit" class="text-xs font-mono text-gray-600 hover:text-gray-400 transition-colors">
-          cancelar configuración
-        </button>
-      </form>
 
       {% else %}
       <!-- Estado: inactivo -->
-      <p class="text-sm text-gray-400">
-        Hoy tu bóveda está protegida solo por tu contraseña. Con 2FA, iniciar sesión
-        (en la web y la extensión) pedirá además un código de 6 dígitos de tu app de
-        autenticación — aunque alguien robe tu contraseña, no podrá entrar.
+      <p class="text-[13.5px] text-gray-400 leading-relaxed mb-[18px]">
+        Hoy tu bóveda está protegida solo por tu contraseña. Con 2FA, iniciar sesión —en la web y en la
+        extensión— pedirá además un código de 6 dígitos de tu app de autenticación. Aunque alguien robe tu
+        contraseña, no podrá entrar.
       </p>
       <form method="post" action="/ui/seguridad/2fa/iniciar">
         <button type="submit"
-                class="px-4 py-2 rounded-lg bg-accent text-black hover:bg-accent-dim text-sm font-semibold transition-colors">
+                class="inline-flex items-center gap-2 text-[13.5px] font-semibold text-black bg-accent rounded-[9px] px-[18px] py-2.5 hover:bg-accent-dim transition-colors">
+          <svg class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           Activar 2FA
         </button>
       </form>
       {% endif %}
 
-      <p class="text-xs text-gray-600 border-t border-surface-border/60 pt-3">
-        ¿Perdiste el autenticador? Como la base de datos es tuya, puedes desactivar el 2FA
-        directamente en ella — instrucciones en la sección "Seguridad" del README del repo.
+      <p class="text-xs text-gray-600 leading-relaxed mt-[18px] pt-4 border-t border-surface-border">
+        ¿Perdiste el autenticador? Como la base de datos es tuya, puedes desactivar el 2FA directamente en
+        ella — instrucciones en la sección «Seguridad» del README del repo.
       </p>
+    </div>
+  </section>
+
+  <!-- ░░ ACCESO ░░ -->
+  <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-2xl overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-surface-border">
+      <span class="text-[11px] font-mono font-semibold uppercase tracking-widest text-gray-400">acceso</span>
+    </div>
+
+    <!-- Contraseña de la cuenta (editable) -->
+    {% include "security/partials/password_row.html" %}
+
+    <!-- PIN de la extensión (informativo: vive en la extensión) -->
+    <div class="flex items-center justify-between gap-4 px-5 py-4 border-b border-surface-border flex-wrap">
+      <div class="min-w-0">
+        <p class="text-[13.5px] text-gray-200 font-medium mb-0.5">PIN de la extensión</p>
+        <p class="text-xs text-gray-500">Abre la bóveda en el navegador · se gestiona desde la extensión</p>
+      </div>
+      <span class="font-mono text-[11px] text-gray-500 bg-surface-solid border border-surface-border rounded-md px-2.5 py-1.5 whitespace-nowrap">en la extensión</span>
+    </div>
+
+    <!-- Bloqueo automático (informativo: vive en la extensión) -->
+    <div class="flex items-center justify-between gap-4 px-5 py-4 flex-wrap">
+      <div class="min-w-0">
+        <p class="text-[13.5px] text-gray-200 font-medium mb-0.5">Bloqueo automático</p>
+        <p class="text-xs text-gray-500">La bóveda se bloquea tras inactividad · se gestiona desde la extensión</p>
+      </div>
+      <span class="font-mono text-[11px] text-gray-500 bg-surface-solid border border-surface-border rounded-md px-2.5 py-1.5 whitespace-nowrap">en la extensión</span>
+    </div>
+  </section>
+
+  <!-- ░░ DATOS LOCALES ░░ -->
+  <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-2xl overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-surface-border">
+      <span class="text-[11px] font-mono font-semibold uppercase tracking-widest text-gray-400">datos locales</span>
+    </div>
+    <div class="flex items-center justify-between gap-4 px-5 py-4 flex-wrap">
+      <div class="min-w-0">
+        <p class="text-[13.5px] text-gray-200 font-medium mb-0.5">Exportar copia de la bóveda</p>
+        <p class="text-xs text-gray-500">Descarga un <span class="font-mono">.json</span> con tus proyectos, credenciales y servicios</p>
+      </div>
+      <a href="/api/export" download="dev-hub-export.json"
+         class="inline-flex items-center gap-2 font-mono text-[12.5px] text-gray-300 bg-surface border border-surface-border rounded-[9px] px-4 py-2.5 hover:border-accent/40 hover:text-accent transition-colors whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        Exportar
+      </a>
     </div>
   </section>
 
