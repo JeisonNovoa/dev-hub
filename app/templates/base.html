@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=1781800007" />
+  <link rel="stylesheet" href="/static/style.css?v=1781800008" />
 
   <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
@@ -167,8 +167,10 @@
 
   <!-- Flash notification -->
   <div x-cloak x-show="flash" x-transition
-       class="fixed top-4 right-4 z-50 px-4 py-3 rounded-lg text-sm font-medium shadow-lg"
-       :class="flash?.type === 'error' ? 'bg-red-900 text-red-200' : 'bg-green-900 text-green-200'"
+       class="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg backdrop-blur-md border"
+       :class="flash?.type === 'error'
+         ? 'bg-red-500/10 border-red-500/40 text-red-300'
+         : 'bg-accent/10 border-accent/40 text-accent'"
        x-text="flash?.message">
   </div>
 

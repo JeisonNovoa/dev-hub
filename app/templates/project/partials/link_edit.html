@@ -18,7 +18,7 @@
         <label class="block text-xs font-mono text-gray-500 uppercase tracking-widest mb-1.5">Categoría</label>
         <select name="category"
                 class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors">
-          {% for cat in ['dashboard','docs','repo','staging','prod','other'] %}
+          {% for cat in ['prod','staging','dashboard','docs','repo','monitoring','other'] %}
           <option value="{{ cat }}" {% if link.category == cat %}selected{% endif %}>{{ cat }}</option>
           {% endfor %}
         </select>

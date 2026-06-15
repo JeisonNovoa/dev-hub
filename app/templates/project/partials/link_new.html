@@ -1,47 +1,34 @@
-<div id="link-new" class="border-b border-surface-border px-5 py-4">
+{# Formulario compacto para agregar un link. Se inserta dentro de #launch-links
+   (bloque de chips). Al guardar, el POST devuelve link_row y reemplaza este form. #}
+<div id="link-new" class="w-full bg-surface border border-surface-border rounded-[10px] p-3 mt-1">
   <form hx-post="/ui/projects/{{ slug }}/links/new"
         hx-target="#link-new"
         hx-swap="outerHTML"
-        class="space-y-3">
-
-    <p class="text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">nuevo link</p>
-
+        class="flex flex-wrap items-end gap-2.5">
+    <div class="flex-1 min-w-[140px]">
+      <label class="block text-[10px] font-mono uppercase tracking-widest text-gray-600 mb-1">Etiqueta</label>
+      <input name="label" required autofocus placeholder="Dashboard…"
+             class="w-full bg-surface-card border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
+    <div class="min-w-[110px]">
+      <label class="block text-[10px] font-mono uppercase tracking-widest text-gray-600 mb-1">Categoría</label>
+      <select name="category"
+              class="w-full bg-surface-card border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-accent/50 transition-colors">
+        {% for cat in ['prod','staging','dashboard','docs','repo','monitoring','other'] %}
+        <option value="{{ cat }}">{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex-1 min-w-[160px]">
+      <label class="block text-[10px] font-mono uppercase tracking-widest text-gray-600 mb-1">URL</label>
+      <input name="url" required type="url" placeholder="https://…"
+             class="w-full bg-surface-card border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+    </div>
     <div class="flex gap-2">
-      <div class="flex-1">
-        <label class="block text-xs text-gray-600 font-mono mb-1">Etiqueta</label>
-        <input name="label" required autofocus
-               placeholder="ej: Dashboard, Staging..."
-               class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent/50 transition-colors" />
-      </div>
-      <div>
-        <label class="block text-xs text-gray-600 font-mono mb-1">Categoría</label>
-        <select name="category"
-                class="bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-accent/50 transition-colors">
-          {% for cat in ['dashboard','docs','repo','staging','prod','other'] %}
-          <option value="{{ cat }}">{{ cat }}</option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
-
-    <div>
-      <label class="block text-xs text-gray-600 font-mono mb-1">URL</label>
-      <input name="url" required type="url"
-             placeholder="https://..."
-             class="w-full bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent/50 transition-colors" />
-    </div>
-
-    <div class="flex gap-2 pt-1">
-      <button type="button"
-              onclick="this.closest('#link-new').remove()"
-              class="flex-1 text-sm font-mono px-3 py-2 rounded-lg bg-surface border border-surface-border text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors">
-        Cancelar
-      </button>
+      <button type="button" onclick="this.closest('#link-new').remove()"
+              class="text-sm font-mono px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-gray-400 hover:text-gray-100 hover:border-gray-500 transition-colors">Cancelar</button>
       <button type="submit"
-              class="flex-1 text-sm font-mono font-semibold px-3 py-2 rounded-lg bg-accent hover:bg-accent-dim text-black transition-colors">
-        Agregar link
-      </button>
+              class="text-sm font-mono font-semibold px-3 py-2 rounded-lg bg-accent hover:bg-accent-dim text-black transition-colors">Agregar</button>
     </div>
-
   </form>
 </div>
