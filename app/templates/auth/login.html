@@ -2,50 +2,63 @@
 {% block title %}Iniciar sesión — Dev Hub{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-center min-h-[60vh]">
-  <div class="w-full max-w-sm">
+<!-- Marca arriba a la izquierda -->
+<div class="absolute top-6 left-7 flex items-center gap-2">
+  <span class="font-mono font-bold text-accent text-sm">▸</span>
+  <span class="font-mono font-bold text-gray-500 text-[13px]">dev-hub</span>
+</div>
 
-    <h1 class="text-xl font-semibold font-mono text-gray-100 mb-6 text-center">
-      <span class="text-accent">▸</span> dev-hub
-    </h1>
+<div class="flex items-center justify-center min-h-[80vh]">
+  <div class="w-full max-w-[392px]" x-data="{ show: false }">
 
-    {% if error %}
-    <div class="mb-4 px-4 py-3 rounded-lg bg-red-900/50 border border-red-700 text-red-300 text-sm">
-      {{ error }}
+    <!-- Hero -->
+    <div class="text-center mb-[26px]">
+      <div class="inline-flex items-center justify-center w-12 h-12 rounded-[14px] bg-accent/10 border border-accent/30 mb-4">
+        <span class="font-mono font-bold text-accent text-[22px]">▸</span>
+      </div>
+      <h1 class="font-mono text-[21px] font-bold text-gray-100 tracking-tight">Inicia sesión</h1>
+      <p class="text-[13.5px] text-gray-500 mt-2">Accede a tu bóveda local de dev-hub</p>
+    </div>
+
+    {% if success %}
+    <div class="flex items-center gap-2.5 px-[15px] py-3 mb-4 rounded-xl bg-accent/10 border border-accent/30">
+      <svg class="w-[15px] h-[15px] text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 13l4 4L19 7"/></svg>
+      <span class="text-[13px] text-green-300">{{ success }}</span>
     </div>
     {% endif %}
+    {% if error %}
+    <div class="mb-4 px-4 py-3 rounded-xl bg-red-900/40 border border-red-700/50 text-red-300 text-sm">{{ error }}</div>
+    {% endif %}
 
-    <form method="post" action="/login" class="space-y-4">
-      <div>
-        <label class="block text-xs text-gray-400 mb-1.5" for="email">Email</label>
-        <input
-          id="email" name="email" type="email" required autocomplete="email"
-          class="w-full px-3 py-2 rounded-md bg-surface border border-surface-border text-gray-100
-                 text-sm placeholder-gray-600 focus:outline-none focus:border-accent transition-colors"
-          placeholder="tu@email.com"
-        />
-      </div>
+    <!-- Card -->
+    <div class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-2xl p-[26px] shadow-2xl">
+      <form method="post" action="/login" class="flex flex-col gap-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-[7px]" for="email">Email</label>
+          <input id="email" name="email" type="email" required autocomplete="email" placeholder="tu@email.com"
+                 class="w-full bg-surface border border-surface-border rounded-[10px] px-[13px] py-[11px] font-mono text-[13px] text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-[7px]" for="password">Contraseña</label>
+          <div class="flex items-center bg-surface border border-surface-border rounded-[10px] focus-within:border-accent/50 transition-colors">
+            <input id="password" name="password" :type="show ? 'text' : 'password'" required autocomplete="current-password" placeholder="••••••••"
+                   class="flex-1 min-w-0 bg-transparent border-none px-[13px] py-[11px] font-mono text-[13px] text-gray-100 placeholder-gray-600 focus:outline-none" />
+            <button type="button" @click="show = !show" title="Mostrar / ocultar"
+                    class="w-[38px] h-[38px] flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors">
+              <svg x-show="!show" class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              <svg x-show="show" x-cloak class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit"
+                class="w-full mt-1 py-3 rounded-[10px] bg-accent text-[14px] font-semibold text-black hover:bg-accent-dim transition-colors">
+          Iniciar sesión
+        </button>
+      </form>
+    </div>
 
-      <div>
-        <label class="block text-xs text-gray-400 mb-1.5" for="password">Contraseña</label>
-        <input
-          id="password" name="password" type="password" required autocomplete="current-password"
-          class="w-full px-3 py-2 rounded-md bg-surface border border-surface-border text-gray-100
-                 text-sm placeholder-gray-600 focus:outline-none focus:border-accent transition-colors"
-          placeholder="••••••••"
-        />
-      </div>
-
-      <button type="submit"
-              class="w-full py-2 px-4 rounded-md bg-accent text-surface font-medium text-sm
-                     hover:bg-accent/90 transition-colors">
-        Iniciar sesión
-      </button>
-    </form>
-
-    <p class="mt-5 text-center text-xs text-gray-500">
-      ¿No tienes cuenta?
-      <a href="/register" class="text-accent hover:underline">Regístrate</a>
+    <p class="text-center text-[12.5px] text-gray-500 mt-[18px]">
+      ¿No tienes cuenta? <a href="/register" class="text-accent hover:underline">Regístrate</a>
     </p>
 
   </div>

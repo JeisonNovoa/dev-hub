@@ -2,41 +2,65 @@
 {% block title %}Verificación — Dev Hub{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-center min-h-[60vh]">
-  <div class="w-full max-w-sm">
+<!-- Marca arriba a la izquierda -->
+<div class="absolute top-6 left-7 flex items-center gap-2">
+  <span class="font-mono font-bold text-accent text-sm">▸</span>
+  <span class="font-mono font-bold text-gray-500 text-[13px]">dev-hub</span>
+</div>
 
-    <h1 class="text-xl font-semibold font-mono text-gray-100 mb-2 text-center">
-      <span class="text-accent">▸</span> dev-hub
-    </h1>
-    <p class="text-sm text-gray-500 text-center mb-6">Verificación en dos pasos</p>
+<div class="flex items-center justify-center min-h-[80vh]">
+  <div class="w-full max-w-[392px]"
+       x-data="{
+         code: '',
+         onInput(e) { this.code = (e.target.value || '').replace(/\D/g, '').slice(0, 6); },
+         box(i) { return this.code[i] || ''; },
+         active(i) { return i === this.code.length && this.code.length < 6; }
+       }">
+
+    <!-- Hero -->
+    <div class="text-center mb-[26px]">
+      <div class="inline-flex items-center justify-center w-12 h-12 rounded-[14px] bg-accent/10 border border-accent/30 mb-4">
+        <span class="font-mono font-bold text-accent text-[22px]">▸</span>
+      </div>
+      <h1 class="font-mono text-[21px] font-bold text-gray-100 tracking-tight">Verificación</h1>
+      <p class="text-[13.5px] text-gray-500 mt-2">Verificación en dos pasos</p>
+    </div>
 
     {% if error %}
-    <div class="mb-4 px-4 py-3 rounded-lg bg-red-900/50 border border-red-700 text-red-300 text-sm">
-      {{ error }}
-    </div>
+    <div class="mb-4 px-4 py-3 rounded-xl bg-red-900/40 border border-red-700/50 text-red-300 text-sm">{{ error }}</div>
     {% endif %}
 
-    <form method="post" action="/login/2fa" class="space-y-4">
-      <input type="hidden" name="pending_token" value="{{ pending_token }}" />
-      <div>
-        <label class="block text-xs text-gray-400 mb-1.5" for="code">Código de tu app de autenticación</label>
-        <input
-          id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]*"
-          maxlength="6" required autofocus autocomplete="one-time-code"
-          class="w-full px-3 py-2 rounded-md bg-surface border border-surface-border text-gray-100
-                 text-center text-lg tracking-[0.4em] font-mono placeholder-gray-600
-                 focus:outline-none focus:border-accent transition-colors"
-          placeholder="••••••"
-        />
-      </div>
-      <button type="submit"
-              class="w-full py-2 rounded-md bg-accent hover:bg-accent-dim text-black text-sm font-semibold transition-colors">
-        Verificar
-      </button>
-      <p class="text-xs text-gray-600 text-center">
-        <a href="/login" class="hover:text-gray-400 transition-colors">← volver al login</a>
-      </p>
-    </form>
+    <!-- Card -->
+    <div class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-2xl p-[26px] shadow-2xl">
+      <form method="post" action="/login/2fa" class="flex flex-col items-center gap-[18px]">
+        <input type="hidden" name="pending_token" value="{{ pending_token }}" />
+        <p class="text-[13px] text-gray-400 text-center leading-relaxed">Introduce el código de 6 dígitos de tu app de autenticación.</p>
+
+        <!-- Casillas: el input real captura el teclado; las casillas lo reflejan -->
+        <div class="relative w-max cursor-text" @click="$refs.code.focus()">
+          <input x-ref="code" name="code" x-model="code" @input="onInput($event)"
+                 inputmode="numeric" maxlength="6" required autofocus autocomplete="one-time-code"
+                 class="absolute inset-0 w-full h-full opacity-0 cursor-text" />
+          <div class="flex gap-[9px]">
+            <template x-for="i in 6" :key="i">
+              <span class="w-[42px] h-[52px] rounded-[10px] bg-surface border flex items-center justify-center font-mono text-[22px] font-semibold text-gray-100 transition-colors"
+                    :class="active(i - 1) ? 'border-accent/60' : (box(i - 1) ? 'border-gray-600' : 'border-surface-border')"
+                    x-text="box(i - 1)"></span>
+            </template>
+          </div>
+        </div>
+
+        <button type="submit"
+                class="w-full py-3 rounded-[10px] bg-accent text-[14px] font-semibold text-black hover:bg-accent-dim transition-colors">
+          Verificar
+        </button>
+        <a href="/login" class="font-mono text-xs text-gray-500 hover:text-gray-300 transition-colors">← volver al login</a>
+      </form>
+    </div>
+
+    <p class="text-center mt-[18px]">
+      <span class="font-mono text-[11.5px] text-gray-600">bóveda local · cifrada en el servidor</span>
+    </p>
 
   </div>
 </div>
