@@ -49,6 +49,68 @@ def weakness_reason(password: str) -> str | None:
     return None
 
 
+@dataclass(frozen=True)
+class CredentialSecurity:
+    """Análisis de seguridad de UNA credencial, para su página de detalle."""
+
+    has_password: bool
+    strong: bool                  # contraseña aceptable (sin motivo de debilidad)
+    weakness: str | None          # motivo si es débil
+    strength_score: int           # 0..4 segmentos llenos para la barra
+    length: int
+    char_classes: int             # variedad (minús/mayús/dígitos/símbolos)
+    reused: bool                  # comparte contraseña con otra credencial
+    reused_with: list[str]        # etiquetas de las otras que la comparten
+
+
+def _char_classes(password: str) -> int:
+    return sum([
+        any(c.islower() for c in password),
+        any(c.isupper() for c in password),
+        any(c.isdigit() for c in password),
+        any(not c.isalnum() for c in password),
+    ])
+
+
+def analyze_credential(cred: Credential, all_credentials: list[Credential]) -> CredentialSecurity:
+    """Seguridad de una credencial frente al resto de la bóveda. Las contraseñas
+    se comparan en memoria; nada de esto se persiste ni sale más allá del informe."""
+    password = cred.password
+    if not password:
+        return CredentialSecurity(
+            has_password=False, strong=False, weakness=None, strength_score=0,
+            length=0, char_classes=0, reused=False, reused_with=[],
+        )
+
+    reason = weakness_reason(password)
+    classes = _char_classes(password)
+    # Barra de 0..4: penaliza longitud corta y poca variedad.
+    score = classes
+    if len(password) < 8:
+        score = min(score, 1)
+    elif len(password) < 12:
+        score = min(score, 3)
+    if reason is None:
+        score = max(score, 3)
+    score = max(0, min(4, score))
+
+    reused_with = [
+        c.label for c in all_credentials
+        if c.id != cred.id and c.password and c.password == password
+    ]
+
+    return CredentialSecurity(
+        has_password=True,
+        strong=reason is None,
+        weakness=reason,
+        strength_score=score,
+        length=len(password),
+        char_classes=classes,
+        reused=bool(reused_with),
+        reused_with=reused_with,
+    )
+
+
 def analyze(credentials: list[Credential]) -> HygieneReport:
     by_password: dict[str, list[Credential]] = {}
     weak: list[tuple[Credential, str]] = []

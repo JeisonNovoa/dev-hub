@@ -152,6 +152,27 @@ def hygiene_page(
     )
 
 
+def _detail_card_context(cred: Credential, request: Request, db: Session, user: User) -> dict:
+    """Contexto del detalle (lectura): credencial + análisis de seguridad frente
+    al resto de la bóveda + señal de rotación. Lo comparten la página, el partial
+    detail-card y el guardado, para que el panel de seguridad sea consistente.
+    Las contraseñas se comparan en memoria; nada de esto se persiste."""
+    from app.services.password_hygiene import analyze_credential
+
+    all_creds = (
+        db.query(Credential)
+        .filter(Credential.user_id == user.id, Credential.deleted_at.is_(None))
+        .all()
+    )
+    return {
+        "request": request,
+        "cred": cred,
+        "security": analyze_credential(cred, all_creds),
+        "stale": is_stale(cred.updated_at),
+        "current_user": user,
+    }
+
+
 @router.get("/credentials/{cred_id}", response_class=HTMLResponse)
 def credential_detail_page(
     cred_id: int,
@@ -162,7 +183,7 @@ def credential_detail_page(
     cred = _get_active_credential_or_404(cred_id, current_user.id, db)
     return templates.TemplateResponse(
         "credentials/detail.html",
-        {"request": request, "cred": cred, "current_user": current_user},
+        _detail_card_context(cred, request, db, current_user),
     )
 
 
@@ -176,7 +197,7 @@ def credential_detail_card(
     cred = _get_active_credential_or_404(cred_id, current_user.id, db)
     return templates.TemplateResponse(
         "credentials/partials/detail_card.html",
-        {"request": request, "cred": cred, "current_user": current_user},
+        _detail_card_context(cred, request, db, current_user),
     )
 
 
@@ -215,7 +236,7 @@ def credential_detail_save(
     db.refresh(cred)
     return templates.TemplateResponse(
         "credentials/partials/detail_card.html",
-        {"request": request, "cred": cred, "current_user": current_user},
+        _detail_card_context(cred, request, db, current_user),
     )
 
 

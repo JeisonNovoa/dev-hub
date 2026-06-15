@@ -90,3 +90,55 @@ def test_credentials_page_sorts_by_updated_at(client):
     client.post("/api/credentials", json={"label": "Z", "category": "work"})
     res = client.get("/credentials?sort=updated_at&order=desc")
     assert res.status_code == 200
+
+
+# --- Detalle de credencial: análisis de seguridad por ítem ---
+
+def test_analyze_credential_strong_and_unique():
+    from types import SimpleNamespace
+
+    from app.services.password_hygiene import analyze_credential
+
+    cred = SimpleNamespace(id=1, label="A", password="S7p!supabase#prod42")
+    sec = analyze_credential(cred, [cred])
+    assert sec.has_password is True
+    assert sec.strong is True
+    assert sec.weakness is None
+    assert sec.reused is False
+    assert sec.strength_score >= 3
+
+
+def test_analyze_credential_detects_reuse():
+    from types import SimpleNamespace
+
+    from app.services.password_hygiene import analyze_credential
+
+    a = SimpleNamespace(id=1, label="Gmail", password="Verano2023!")
+    b = SimpleNamespace(id=2, label="Netflix", password="Verano2023!")
+    sec = analyze_credential(a, [a, b])
+    assert sec.reused is True
+    assert "Netflix" in sec.reused_with
+
+
+def test_analyze_credential_no_password():
+    from types import SimpleNamespace
+
+    from app.services.password_hygiene import analyze_credential
+
+    cred = SimpleNamespace(id=1, label="GitHub OAuth", password=None)
+    sec = analyze_credential(cred, [cred])
+    assert sec.has_password is False
+    assert sec.strength_score == 0
+
+
+def test_credential_detail_shows_security_panel(client):
+    r = client.post("/api/credentials", json={
+        "label": "Supabase", "username": "a@x.com", "password": "S7p!supabase#prod42", "category": "project",
+    })
+    cred_id = r.json()["id"]
+    res = client.get(f"/credentials/{cred_id}")
+    assert res.status_code == 200
+    body = res.text
+    assert "seguridad" in body
+    assert "Fortaleza" in body
+    assert "detalles" in body
