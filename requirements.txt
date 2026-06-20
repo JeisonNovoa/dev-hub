@@ -17,3 +17,4 @@ slowapi==0.1.9
 email-validator==2.2.0
 pyotp==2.9.0
 qrcode==8.2
+httpx==0.28.1

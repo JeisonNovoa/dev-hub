@@ -27,6 +27,39 @@ class HygieneReport:
         reused_count = sum(len(group) for group in self.reused)
         return reused_count + len(self.weak) + len(self.no_url) + len(self.no_password)
 
+    @property
+    def health_score(self) -> int:
+        """Salud global de la bóveda, 0–100.
+
+        Parte de 100 y descuenta según la gravedad relativa de cada problema
+        (reutilizadas y débiles pesan más que sin-url/sin-contraseña). Se pondera
+        por el total de credenciales para que en bóvedas grandes unos pocos
+        problemas no hundan el puntaje.
+        """
+        if self.total == 0:
+            return 100
+        reused_count = sum(len(group) for group in self.reused)
+        # Peso de cada credencial problemática (0..1 aprox por item).
+        penalty = (
+            reused_count * 1.0
+            + len(self.weak) * 0.8
+            + len(self.no_url) * 0.3
+            + len(self.no_password) * 0.3
+        )
+        score = 100 - round(penalty / self.total * 100)
+        return max(0, min(100, score))
+
+    @property
+    def health_label(self) -> str:
+        s = self.health_score
+        if s >= 90:
+            return "excelente"
+        if s >= 70:
+            return "buena"
+        if s >= 40:
+            return "mejorable"
+        return "en riesgo"
+
 
 def weakness_reason(password: str) -> str | None:
     """Motivo por el que una contraseña es débil, o None si es aceptable."""

@@ -113,7 +113,8 @@ def test_hygiene_page_healthy(client):
     _create_credential(client, "Sana", password="Clave-Robusta-2026!", url="https://ok.com")
     res = client.get("/credentials/higiene")
     assert res.status_code == 200
-    assert "Bóveda sana" in res.text
+    assert "excelente" in res.text
+    assert "problemas detectables" in res.text
 
 
 def test_hygiene_page_isolated_per_user(client, db):
@@ -133,3 +134,122 @@ def test_hygiene_page_isolated_per_user(client, db):
 def test_hygiene_requires_login(unauth_client):
     res = unauth_client.get("/credentials/higiene", follow_redirects=False)
     assert res.status_code == 302
+
+
+# ─── Puntaje de salud global ─────────────────────────────────────────────────
+
+def test_health_score_perfect_when_no_issues():
+    creds = [_FakeCred("OK", password="Super-Clave-2026!", url="https://ok.com")]
+    report = analyze(creds)
+    assert report.health_score == 100
+    assert report.health_label == "excelente"
+
+
+def test_health_score_empty_vault():
+    report = analyze([])
+    assert report.health_score == 100
+
+
+def test_health_score_drops_with_issues():
+    creds = [
+        _FakeCred("A", password="123456", url="https://a.com"),       # débil
+        _FakeCred("B", password="123456", url="https://b.com"),       # débil + reutilizada con A
+        _FakeCred("C", password="abcdefghij", url="https://c.com"),   # débil
+        _FakeCred("D", password="Buena-Clave-2026!"),                 # sin url
+    ]
+    report = analyze(creds)
+    assert 0 <= report.health_score < 100
+    assert report.health_label in ("buena", "mejorable", "en riesgo")
+
+
+def test_health_score_clamped_0_100():
+    creds = [_FakeCred(f"x{i}", password="123", url="https://x.com") for i in range(50)]
+    report = analyze(creds)
+    assert 0 <= report.health_score <= 100
+
+
+# ─── Have I Been Pwned (k-anonymity) ─────────────────────────────────────────
+
+import hashlib
+
+from app.services.pwned import check_passwords
+
+
+class _FakeResponse:
+    def __init__(self, text):
+        self.text = text
+    def raise_for_status(self):
+        pass
+
+
+class _FakeClient:
+    """Cliente HTTP falso: responde como la API range de HIBP."""
+    def __init__(self, breached_passwords):
+        # password -> nº de veces visto
+        self._db = {}
+        for pwd, count in breached_passwords.items():
+            self._db[hashlib.sha1(pwd.encode()).hexdigest().upper()] = count
+        self.calls = []
+    def get(self, url):
+        prefix = url.rsplit("/", 1)[-1]
+        self.calls.append(prefix)
+        lines = [f"{h[5:]}:{c}" for h, c in self._db.items() if h.startswith(prefix)]
+        # Ruido: sufijos que no son de nadie, para asegurar el match exacto
+        lines.append("0000000000000000000000000000000000:9")
+        return _FakeResponse("\r\n".join(lines))
+
+
+def test_pwned_detects_breached():
+    client = _FakeClient({"123456": 37359195})
+    result = check_passwords([("Cuenta débil", "123456"), ("Cuenta fuerte", "Zx9$wq2-La!7")], client=client)
+    assert result.checked
+    assert result.breached == [("Cuenta débil", 37359195)]
+
+
+def test_pwned_clean_when_none_breached():
+    client = _FakeClient({"123456": 100})
+    result = check_passwords([("Segura", "Zx9$wq2-La!7")], client=client)
+    assert result.checked
+    assert result.breached == []
+
+
+def test_pwned_only_sends_hash_prefix():
+    """Garantía de privacidad: a la API solo viaja el prefijo de 5 chars del SHA-1."""
+    client = _FakeClient({})
+    check_passwords([("X", "mi-contraseña-secreta")], client=client)
+    full_hash = hashlib.sha1("mi-contraseña-secreta".encode()).hexdigest().upper()
+    assert client.calls == [full_hash[:5]]
+    assert all(len(c) == 5 for c in client.calls)
+
+
+def test_pwned_groups_by_prefix():
+    # Dos contraseñas distintas; cada una su prefijo → 2 llamadas como mucho
+    client = _FakeClient({})
+    check_passwords([("A", "alpha"), ("B", "beta")], client=client)
+    assert len(client.calls) <= 2
+
+
+def test_pwned_resilient_on_network_error():
+    class _BoomClient:
+        def get(self, url):
+            raise RuntimeError("sin red")
+    result = check_passwords([("X", "123456")], client=_BoomClient())
+    assert result.checked is False
+    assert result.breached == []
+    assert result.error
+
+
+def test_pwned_empty_list():
+    result = check_passwords([])
+    assert result.checked
+    assert result.breached == []
+
+
+# ─── Página: medidor y endpoint de filtraciones ──────────────────────────────
+
+def test_hygiene_page_shows_health_score(client):
+    _create_credential(client, "OK", password="Clave-Robusta-2026!", url="https://ok.com")
+    res = client.get("/credentials/higiene")
+    assert res.status_code == 200
+    assert "Salud de la bóveda" in res.text
+    assert "Comprobar filtraciones" in res.text

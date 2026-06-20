@@ -152,6 +152,34 @@ def hygiene_page(
     )
 
 
+@router.post("/ui/credentials/higiene/filtraciones", response_class=HTMLResponse)
+def hygiene_breach_check(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    """Comprueba contra Have I Been Pwned (k-anonymity) si alguna contraseña
+    apareció en filtraciones conocidas. Opt-in: solo se ejecuta al pulsar el
+    botón. La contraseña nunca sale del servidor (solo viaja un prefijo de hash)."""
+    from app.services.pwned import check_passwords
+
+    creds = (
+        db.query(Credential)
+        .filter(
+            Credential.user_id == current_user.id,
+            Credential.deleted_at.is_(None),
+            Credential.password.isnot(None),
+        )
+        .order_by(Credential.label)
+        .all()
+    )
+    result = check_passwords([(c.label, c.password) for c in creds])
+    return templates.TemplateResponse(
+        "credentials/partials/breach_result.html",
+        {"request": request, "result": result, "current_user": current_user},
+    )
+
+
 def _detail_card_context(cred: Credential, request: Request, db: Session, user: User) -> dict:
     """Contexto del detalle (lectura): credencial + análisis de seguridad frente
     al resto de la bóveda + señal de rotación. Lo comparten la página, el partial
