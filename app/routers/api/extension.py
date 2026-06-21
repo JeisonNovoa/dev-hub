@@ -20,6 +20,7 @@ from app.dependencies import _as_utc, get_current_user, get_user_from_extension_
 from app.limiter import limiter
 from app.models import Credential, ExtensionToken, User
 from app.models.extension_token import DEFAULT_TOKEN_TTL_DAYS, MAX_ACTIVE_TOKENS
+from app.services import credentials as cred_service
 from app.utils.url import domains_match, extract_domain
 
 router = APIRouter()
@@ -260,21 +261,10 @@ def credential_secret(
     current_user: User = Depends(get_user_from_extension_token),
 ) -> dict:
     """Devuelve usuario y contraseña en claro para rellenar. Acceso registrado en logs."""
-    cred = (
-        db.query(Credential)
-        .filter(
-            Credential.id == cred_id,
-            Credential.user_id == current_user.id,
-            Credential.deleted_at.is_(None),
-        )
-        .first()
-    )
-    if not cred:
-        raise HTTPException(status_code=404, detail="Credencial no encontrada")
+    cred = cred_service.get_owned_or_404(db, cred_id, current_user.id)
     # Acceder al secreto = uso real (autofill, copiar o ver la contraseña):
     # alimenta el orden por uso reciente de la bóveda y el dropdown.
-    cred.last_used_at = datetime.now(timezone.utc)
-    db.commit()
+    cred_service.mark_used(db, cred)
     logger.info("Secreto de credencial accedido vía extensión: id=%d user=%d", cred.id, current_user.id)
     return {"id": cred.id, "username": cred.username, "password": cred.password}
 
@@ -286,35 +276,18 @@ def create_credential_from_extension(
     current_user: User = Depends(get_user_from_extension_token),
 ) -> dict:
     """Guarda una credencial detectada por la extensión (flujo '¿Guardar en DevHub?')."""
-    url = data.url.strip()
-    if not url.startswith(("http://", "https://")):
-        url = "https://" + url
-    cred = Credential(
-        user_id=current_user.id,
+    cred = cred_service.create(
+        db,
+        current_user,
         label=data.label,
-        username=data.username or None,
-        password=data.password or None,
-        url=url,
-        category=data.category or "personal",
+        username=data.username,
+        password=data.password,
+        url=data.url,
+        category=data.category,
         login_via=data.login_via,
-        notes=data.notes or None,
+        notes=data.notes,
     )
-    db.add(cred)
-    db.commit()
-    db.refresh(cred)
-    logger.info("Credencial creada vía extensión: '%s' (id=%d)", cred.label, cred.id)
     return {"id": cred.id, "label": cred.label}
-
-
-def _get_owned_credential(cred_id: int, user_id: int, db: Session) -> Credential:
-    cred = (
-        db.query(Credential)
-        .filter(Credential.id == cred_id, Credential.user_id == user_id, Credential.deleted_at.is_(None))
-        .first()
-    )
-    if not cred:
-        raise HTTPException(status_code=404, detail="Credencial no encontrada")
-    return cred
 
 
 @router.patch("/credentials/{cred_id}")
@@ -324,16 +297,9 @@ def update_credential_from_extension(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_user_from_extension_token),
 ) -> dict:
-    cred = _get_owned_credential(cred_id, current_user.id, db)
+    cred = cred_service.get_owned_or_404(db, cred_id, current_user.id)
     fields = data.model_dump(exclude_unset=True)
-    if "url" in fields and fields["url"]:
-        url = fields["url"].strip()
-        fields["url"] = url if url.startswith(("http://", "https://")) else "https://" + url
-    for field, value in fields.items():
-        setattr(cred, field, value if value != "" else None)
-    db.commit()
-    db.refresh(cred)
-    logger.info("Credencial editada vía extensión: id=%d user=%d", cred.id, current_user.id)
+    cred = cred_service.update(db, cred, fields)
     return {"id": cred.id, "label": cred.label}
 
 
@@ -343,11 +309,8 @@ def delete_credential_from_extension(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_user_from_extension_token),
 ) -> None:
-    from datetime import datetime, timezone
-    cred = _get_owned_credential(cred_id, current_user.id, db)
-    cred.deleted_at = datetime.now(timezone.utc)
-    db.commit()
-    logger.info("Credencial movida a papelera vía extensión: id=%d user=%d", cred.id, current_user.id)
+    cred = cred_service.get_owned_or_404(db, cred_id, current_user.id)
+    cred_service.soft_delete(db, cred)
 
 
 # --- Gestión de tokens desde la web (cookie de sesión, no token) ---

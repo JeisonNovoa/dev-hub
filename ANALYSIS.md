@@ -180,3 +180,8 @@ Orden por riesgo × esfuerzo.
 - **A5.** `selectinload` aplicado a `get_project_or_404` (commands, env_vars,
   links, credentials, repos, services) y a `export.py` (env_vars, commands,
   links, repos). Evita N+1 en Supabase con latencia de red.
+- **A4.** `app/services/credentials.py` (CredentialService) unifica CRUD
+  entre `routers/api/credentials.py` y `routers/api/extension.py`. Helpers
+  `normalize_url`, `get_owned_or_404`, `create`, `update`, `soft_delete`,
+  `mark_used`. Normalización de URL consistente en ambos entry points.
+  10 tests nuevos en `test_credential_service.py`.

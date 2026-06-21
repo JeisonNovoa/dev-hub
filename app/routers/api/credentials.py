@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -8,21 +8,10 @@ from app.dependencies import get_current_user
 from app.models import Credential, User
 from app.schemas.credential import CredentialCreate, CredentialResponse, CredentialUpdate
 from app.schemas.pagination import Page
+from app.services import credentials as cred_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-def _get_credential_or_404(cred_id: int, user_id: int, db: Session) -> Credential:
-    cred = (
-        db.query(Credential)
-        .filter(Credential.id == cred_id, Credential.user_id == user_id, Credential.deleted_at.is_(None))
-        .first()
-    )
-    if not cred:
-        logger.warning("Credencial no encontrada: id=%d", cred_id)
-        raise HTTPException(status_code=404, detail="Credencial no encontrada")
-    return cred
 
 
 @router.get("", response_model=Page[CredentialResponse])
@@ -59,7 +48,9 @@ def create_credential(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Credential:
-    cred = Credential(
+    return cred_service.create(
+        db,
+        current_user,
         label=data.label,
         username=data.username,
         password=data.password,
@@ -68,13 +59,7 @@ def create_credential(
         notes=data.notes,
         service_id=data.service_id,
         project_id=data.project_id,
-        user_id=current_user.id,
     )
-    db.add(cred)
-    db.commit()
-    db.refresh(cred)
-    logger.info("Credencial creada: '%s' (id=%d)", cred.label, cred.id)
-    return cred
 
 
 @router.get("/{cred_id}", response_model=CredentialResponse)
@@ -83,7 +68,7 @@ def get_credential(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Credential:
-    return _get_credential_or_404(cred_id, current_user.id, db)
+    return cred_service.get_owned_or_404(db, cred_id, current_user.id)
 
 
 @router.put("/{cred_id}", response_model=CredentialResponse)
@@ -93,12 +78,8 @@ def update_credential(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Credential:
-    cred = _get_credential_or_404(cred_id, current_user.id, db)
-    for field, value in data.model_dump(exclude_unset=True).items():
-        setattr(cred, field, value)
-    db.commit()
-    db.refresh(cred)
-    return cred
+    cred = cred_service.get_owned_or_404(db, cred_id, current_user.id)
+    return cred_service.update(db, cred, data.model_dump(exclude_unset=True))
 
 
 @router.delete("/{cred_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -107,8 +88,5 @@ def delete_credential(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> None:
-    from datetime import datetime, timezone
-    cred = _get_credential_or_404(cred_id, current_user.id, db)
-    cred.deleted_at = datetime.now(timezone.utc)
-    db.commit()
-    logger.info("Credencial movida a papelera: '%s' (id=%d)", cred.label, cred_id)
+    cred = cred_service.get_owned_or_404(db, cred_id, current_user.id)
+    cred_service.soft_delete(db, cred)
