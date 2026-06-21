@@ -14,7 +14,7 @@ from app.middleware.csrf import CSRF_COOKIE, CsrfMiddleware, generate_csrf_token
 from app.routers.api import commands, credentials, env_vars, export, extension, links, me, projects, repos, services
 from app.routers.ui import auth as ui_auth
 from app.routers.ui import credentials as ui_credentials
-from app.routers.ui import dashboard, project_detail, trash as ui_trash
+from app.routers.ui import dashboard, project as ui_project, trash as ui_trash
 from app.routers.ui import extension as ui_extension
 from app.routers.ui import import_project as ui_import
 from app.routers.ui import search as ui_search
@@ -116,7 +116,7 @@ app.include_router(extension.router, prefix="/api/extension", tags=["extension"]
 # UI routers — devuelven HTML
 app.include_router(ui_trash.router)
 app.include_router(dashboard.router)
-app.include_router(project_detail.router)
+app.include_router(ui_project.router)
 app.include_router(ui_credentials.router)
 app.include_router(ui_import.router)
 app.include_router(ui_extension.router)

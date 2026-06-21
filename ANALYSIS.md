@@ -185,3 +185,16 @@ Orden por riesgo × esfuerzo.
   `normalize_url`, `get_owned_or_404`, `create`, `update`, `soft_delete`,
   `mark_used`. Normalización de URL consistente en ambos entry points.
   10 tests nuevos en `test_credential_service.py`.
+- **A8.** Tests unitarios puros (sin BD) en `test_utils_unit.py` para
+  `activity.build_summary` (5 tests) y `projects.{relative_activity,
+  is_recent, start_command, primary_link}` (17 tests). Total: 22 tests
+  nuevos.
+- **A1.** `project_detail.py` (716 líneas) → paquete `app/routers/ui/project/`
+  con 9 módulos (detail, env_vars, commands, links, services, header, notes,
+  repos, credentials) + `__init__.py` que combina los routers. Cada archivo
+  ~80-130 líneas. `credentials.py` (450 líneas) → paquete
+  `app/routers/ui/credentials/` con 5 módulos (listing, hygiene, detail,
+  forms, _shared) + `__init__.py`. Re-export de `is_stale` para mantener
+  `from app.routers.ui.credentials import is_stale` funcionando.
+
+**Bloque de arquitectura COMPLETO (A1-A8).** Suite: 328 tests verdes.
