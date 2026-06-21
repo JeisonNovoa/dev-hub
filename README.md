@@ -242,14 +242,45 @@ dev-hub/
 
 ## Integración con Claude Code
 
-La API acepta peticiones directas sin autenticación adicional desde localhost. Claude puede registrar proyectos, env vars y comandos automáticamente mientras trabaja:
+**Todos los endpoints `/api/*` requieren autenticación** — no hay rutas
+"públicas para localhost". Hay dos formas de llamarlos desde un script o desde
+Claude Code:
+
+1. **Cookie de sesión** — la que el navegador obtiene al hacer login. Útil
+   cuando Claude corre en la misma máquina que la app y puede reusar la
+   sesión del navegador.
+2. **Token de extensión Bearer** — `Authorization: Bearer dvh_...`. Es el
+   que usa la extensión del navegador; se obtiene una sola vez con
+   `POST /api/extension/login` (email + contraseña + 2FA si está activo)
+   y se revoca desde `Seguridad → Tokens de extensión` en la web. Expira
+   a los 90 días.
+
+Ejemplo con cookie de sesión:
 
 ```bash
-curl -X POST http://localhost:8000/api/projects \
+# 1. Hacer login y guardar la cookie
+curl -c cookies.txt -X POST http://localhost:8000/login \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "email=admin@devhub.local&password=TU_PASSWORD"
+
+# 2. Llamar a la API con esa cookie
+curl -b cookies.txt -X POST http://localhost:8000/api/projects \
   -H "Content-Type: application/json" \
   -d '{"name": "Mi App", "tech_stack": ["FastAPI"], "description": "..."}'
+```
 
-curl -X POST http://localhost:8000/api/projects/mi-app/env-vars \
+Ejemplo con token de extensión:
+
+```bash
+# 1. Pedir token (una sola vez)
+curl -X POST http://localhost:8000/api/extension/login \
   -H "Content-Type: application/json" \
-  -d '{"key": "DATABASE_URL", "value": "sqlite:///./dev.db"}'
+  -d '{"email":"admin@devhub.local","password":"TU_PASSWORD","name":"claude-code"}'
+# → {"token":"dvh_...","email":"..."}
+
+# 2. Usarlo como Bearer
+curl -H "Authorization: Bearer dvh_..." \
+     -X POST http://localhost:8000/api/projects/mi-app/env-vars \
+     -H "Content-Type: application/json" \
+     -d '{"key": "DATABASE_URL", "value": "sqlite:///./dev.db"}'
 ```

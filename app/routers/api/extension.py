@@ -6,7 +6,9 @@ El único endpoint que expone contraseñas en claro es /credentials/{id}/secret.
 """
 
 import logging
-from datetime import datetime, timezone
+import time
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
@@ -14,13 +16,40 @@ from sqlalchemy.orm import Session
 
 from app.auth import generate_extension_token, hash_extension_token, verify_password, verify_totp
 from app.database import get_db
-from app.dependencies import get_current_user, get_user_from_extension_token
+from app.dependencies import _as_utc, get_current_user, get_user_from_extension_token
 from app.limiter import limiter
 from app.models import Credential, ExtensionToken, User
+from app.models.extension_token import DEFAULT_TOKEN_TTL_DAYS, MAX_ACTIVE_TOKENS
 from app.utils.url import domains_match, extract_domain
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+# --- Rate-limit por email (contra IP compartida en Render) ---
+#
+# slowapi usa get_remote_address, que en Render siempre ve la IP del proxy. Un
+# atacante que prueba contraseñas no se topa con el bucket de IP. Añadimos un
+# contador en memoria por email con ventana de 1 minuto. Suficiente para app
+# personal; si escala, migrar a Redis.
+_LOGIN_ATTEMPTS: dict[str, list[float]] = defaultdict(list)
+_LOGIN_WINDOW = 60  # segundos
+_LOGIN_MAX_ATTEMPTS = 10
+
+
+def _check_email_rate_limit(email: str) -> None:
+    now = time.monotonic()
+    key = email.lower().strip()
+    attempts = _LOGIN_ATTEMPTS[key]
+    # Poda entradas viejas.
+    _LOGIN_ATTEMPTS[key] = [t for t in attempts if now - t < _LOGIN_WINDOW]
+    _LOGIN_ATTEMPTS[key].append(now)
+    if len(_LOGIN_ATTEMPTS[key]) > _LOGIN_MAX_ATTEMPTS:
+        logger.warning("Rate limit por email excedido: %s", key)
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiados intentos para esta cuenta. Intenta en un minuto.",
+        )
 
 
 # --- Schemas ---
@@ -80,6 +109,8 @@ def extension_login(
 
     El token en claro se devuelve UNA sola vez; en BD queda solo su hash.
     """
+    _check_email_rate_limit(data.email)
+
     user = db.query(User).filter(User.email == data.email.lower().strip()).first()
     if not user or not user.is_active or not verify_password(data.password, user.hashed_password):
         logger.warning("Login de extensión fallido para email: %s", data.email)
@@ -94,10 +125,34 @@ def extension_login(
             raise HTTPException(status_code=401, detail="Código 2FA incorrecto")
 
     token = generate_extension_token()
-    db.add(ExtensionToken(user_id=user.id, token_hash=hash_extension_token(token), name=data.name))
+    # Limite de tokens activos: si el usuario ya tiene MAX_ACTIVE_TOKENS,
+    # revocamos el más viejo (FIFO) antes de crear el nuevo.
+    active = (
+        db.query(ExtensionToken)
+        .filter(
+            ExtensionToken.user_id == user.id,
+            ExtensionToken.revoked_at.is_(None),
+            ExtensionToken.expires_at > datetime.now(timezone.utc),
+        )
+        .order_by(ExtensionToken.created_at.asc())
+        .all()
+    )
+    if len(active) >= MAX_ACTIVE_TOKENS:
+        for old in active[: len(active) - MAX_ACTIVE_TOKENS + 1]:
+            old.revoked_at = datetime.now(timezone.utc)
+            logger.info("Token viejo revocado por FIFO user_id=%s id=%d", user.id, old.id)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=DEFAULT_TOKEN_TTL_DAYS)
+    db.add(
+        ExtensionToken(
+            user_id=user.id,
+            token_hash=hash_extension_token(token),
+            name=data.name,
+            expires_at=expires_at,
+        )
+    )
     db.commit()
     logger.info("Token de extensión creado para user_id=%s (%s)", user.id, data.name)
-    return {"token": token, "email": user.email}
+    return {"token": token, "email": user.email, "expires_at": expires_at.isoformat()}
 
 
 @router.get("/ping")
@@ -294,6 +349,7 @@ def list_tokens(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
+    now = datetime.now(timezone.utc)
     tokens = (
         db.query(ExtensionToken)
         .filter(ExtensionToken.user_id == current_user.id, ExtensionToken.revoked_at.is_(None))
@@ -307,6 +363,8 @@ def list_tokens(
                 "name": t.name,
                 "created_at": t.created_at,
                 "last_used_at": t.last_used_at,
+                "expires_at": t.expires_at,
+                "expired": _as_utc(t.expires_at) <= now,
             }
             for t in tokens
         ]

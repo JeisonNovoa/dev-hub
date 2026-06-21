@@ -12,6 +12,17 @@ from app.models import ExtensionToken, Project, User
 logger = logging.getLogger(__name__)
 
 
+def _as_utc(dt: datetime) -> datetime:
+    """Normaliza un datetime a aware-UTC.
+
+    SQLite descarta tzinfo pese a DateTime(timezone=True), así que algunos
+    valores llegan naive. Asumimos que naive == UTC (que es como se guardan).
+    """
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     token = request.cookies.get(COOKIE_NAME)
     if token:
@@ -45,7 +56,11 @@ def get_current_user_optional(
 
 
 def get_user_from_extension_token(request: Request, db: Session = Depends(get_db)) -> User:
-    """Autentica peticiones de la extensión vía header Authorization: Bearer <token>."""
+    """Autentica peticiones de la extensión vía header Authorization: Bearer <token>.
+
+    Rechaza tokens revocados o expirados. Un token expirado no se borra: queda
+    en BD para auditoría, pero deja de aceptar peticiones.
+    """
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Token de extensión requerido")
@@ -61,6 +76,9 @@ def get_user_from_extension_token(request: Request, db: Session = Depends(get_db
     if not record:
         logger.warning("Token de extensión inválido o revocado")
         raise HTTPException(status_code=401, detail="Token inválido o revocado")
+    if _as_utc(record.expires_at) <= datetime.now(timezone.utc):
+        logger.warning("Token de extensión expirado: id=%d user=%d", record.id, record.user_id)
+        raise HTTPException(status_code=401, detail="Token expirado, vuelve a iniciar sesión")
     user = db.query(User).filter(User.id == record.user_id, User.is_active.is_(True)).first()
     if not user:
         raise HTTPException(status_code=401, detail="Usuario inactivo")

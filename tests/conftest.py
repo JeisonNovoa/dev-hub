@@ -49,6 +49,9 @@ def reset_rate_limiter():
     """Evita que el rate limit se acumule entre tests (slowapi usa storage en memoria)."""
     from app.limiter import limiter
     limiter.reset()
+    # Rate-limit por email del router de extensión también es en memoria.
+    from app.routers.api import extension as _ext
+    _ext._LOGIN_ATTEMPTS.clear()
 
 
 @pytest.fixture

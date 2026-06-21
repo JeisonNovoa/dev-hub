@@ -258,9 +258,83 @@ def test_list_and_revoke_tokens_via_web(client, ext_token):
     items = res.json()["items"]
     assert len(items) == 1
     assert items[0]["name"] == "Chrome de prueba"
+    # El listado ahora incluye expires_at y flag expired
+    assert "expires_at" in items[0]
+    assert items[0]["expired"] is False
 
     token_id = items[0]["id"]
     assert client.delete(f"/api/extension/tokens/{token_id}").status_code == 204
     # El token revocado deja de servir
     assert client.get("/api/extension/ping", headers=_bearer(ext_token)).status_code == 401
     assert client.get("/api/extension/tokens").json()["items"] == []
+
+
+# ─── Expiración y límite de tokens activos ────────────────────────────────────
+
+def test_login_returns_expires_at(client):
+    res = client.post("/api/extension/login", json={
+        "email": "test@devhub.local", "password": "password123",
+    })
+    assert res.status_code == 200
+    assert "expires_at" in res.json()
+
+
+def test_expired_token_rejected(client, ext_token, db):
+    from datetime import datetime, timedelta, timezone
+    from app.models import ExtensionToken
+
+    # Forzar expiración del token creado por el fixture
+    record = (
+        db.query(ExtensionToken)
+        .filter(ExtensionToken.token_hash.startswith("a"))
+        .first()
+    )
+    # Buscar por hash real del token en claro no es posible; mejor:
+    # traer el más reciente del usuario test@devhub.local y vencerlo.
+    from app.models import User
+    user = db.query(User).filter(User.email == "test@devhub.local").first()
+    rec = (
+        db.query(ExtensionToken)
+        .filter(ExtensionToken.user_id == user.id, ExtensionToken.revoked_at.is_(None))
+        .order_by(ExtensionToken.created_at.desc())
+        .first()
+    )
+    rec.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db.commit()
+
+    res = client.get("/api/extension/ping", headers=_bearer(ext_token))
+    assert res.status_code == 401
+
+
+def test_active_tokens_capped_at_five(client):
+    """El sexto login revoca el token más viejo (FIFO)."""
+    tokens = []
+    for i in range(6):
+        res = client.post("/api/extension/login", json={
+            "email": "test@devhub.local",
+            "password": "password123",
+            "name": f"device-{i}",
+        })
+        assert res.status_code == 200
+        tokens.append(res.json()["token"])
+
+    listed = client.get("/api/extension/tokens").json()["items"]
+    # Solo quedan MAX_ACTIVE_TOKENS (5) activos
+    assert len(listed) == 5
+    # El más viejo (device-0) fue revocado y ya no aparece
+    assert all(item["name"] != "device-0" for item in listed)
+
+
+def test_login_rate_limited_per_email(client):
+    """Más de 10 intentos por email en un minuto → 429."""
+    for _ in range(10):
+        client.post("/api/extension/login", json={
+            "email": "ratelimit@test.local",
+            "password": "cualquiera",
+        })
+    res = client.post("/api/extension/login", json={
+        "email": "ratelimit@test.local",
+        "password": "cualquiera",
+    })
+    assert res.status_code == 429
+
