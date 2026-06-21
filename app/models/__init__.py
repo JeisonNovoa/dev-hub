@@ -6,6 +6,7 @@ from app.models.service import Service
 from app.models.credential import Credential
 from app.models.extension_token import ExtensionToken
 from app.models.project_event import ProjectEvent
+from app.models.recovery_code import RecoveryCode
 
 __all__ = [
     "Base",
@@ -20,4 +21,5 @@ __all__ = [
     "Credential",
     "ExtensionToken",
     "ProjectEvent",
+    "RecoveryCode",
 ]

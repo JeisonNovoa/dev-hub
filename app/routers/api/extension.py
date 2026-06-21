@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
-from app.auth import generate_extension_token, hash_extension_token, verify_password, verify_totp
+from app.auth import generate_extension_token, hash_extension_token, verify_password, verify_totp_for_user
 from app.database import get_db
 from app.dependencies import _as_utc, get_current_user, get_user_from_extension_token
 from app.limiter import limiter
@@ -59,6 +59,7 @@ class ExtensionLogin(BaseModel):
     password: str
     name: str = Field(default="Extensión", max_length=100)
     totp_code: str | None = None
+    recovery_code: str | None = None
 
 
 _VALID_LOGIN_VIA = {"email", "google", "github", "microsoft", "other"}
@@ -118,11 +119,18 @@ def extension_login(
 
     # Con 2FA activo, la extensión también exige el código (si no, sería un bypass).
     if user.totp_enabled:
-        if not data.totp_code:
+        from app.services.recovery_codes import use_recovery_code
+        used_recovery = False
+        if data.recovery_code and data.recovery_code.strip():
+            used_recovery = use_recovery_code(db, user, data.recovery_code)
+            if not used_recovery:
+                raise HTTPException(status_code=401, detail="Código de recuperación inválido o ya usado")
+        elif not data.totp_code:
             raise HTTPException(status_code=401, detail="Se requiere el código 2FA")
-        if not verify_totp(user.totp_secret, data.totp_code):
+        elif not verify_totp_for_user(user, data.totp_code):
             logger.warning("Código 2FA incorrecto en login de extensión: user_id=%s", user.id)
             raise HTTPException(status_code=401, detail="Código 2FA incorrecto")
+        # Si usó recovery, ya quedó persistido por use_recovery_code.
 
     token = generate_extension_token()
     # Limite de tokens activos: si el usuario ya tiene MAX_ACTIVE_TOKENS,

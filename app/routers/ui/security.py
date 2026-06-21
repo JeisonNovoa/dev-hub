@@ -10,12 +10,13 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
-from app.auth import COOKIE_NAME, create_session_cookie, hash_password, verify_password, verify_totp
+from app.auth import COOKIE_NAME, create_session_cookie, hash_password, verify_password, verify_totp_for_user
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.jinja import templates
 from app.models import User
+from app.services.recovery_codes import regenerate_for_user, remaining_count
 
 MIN_PASSWORD_LEN = 8
 
@@ -78,12 +79,22 @@ def totp_confirm(
 ) -> HTMLResponse:
     if not current_user.totp_secret or current_user.totp_confirmed_at:
         return _render(request, current_user, error="No hay una configuración de 2FA pendiente.")
-    if not verify_totp(current_user.totp_secret, code):
+    if not verify_totp_for_user(current_user, code):
         return _render(request, current_user, error="Código incorrecto. Escanea el QR y vuelve a intentar.")
     current_user.totp_confirmed_at = datetime.now(timezone.utc)
     db.commit()
+    # Generar 10 códigos de recuperación y mostrarlos UNA sola vez.
+    recovery_codes = regenerate_for_user(db, current_user)
     logger.info("2FA activado: user_id=%s", current_user.id)
-    return _render(request, current_user, success="2FA activado. Desde ahora el login pedirá tu código.")
+    return templates.TemplateResponse(
+        "security/settings.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "success": "2FA activado. Desde ahora el login pedirá tu código.",
+            "recovery_codes": recovery_codes,
+        },
+    )
 
 
 @router.post("/ui/seguridad/2fa/cancelar", response_class=HTMLResponse)
@@ -108,13 +119,43 @@ def totp_disable(
 ) -> HTMLResponse:
     if not current_user.totp_enabled:
         return _render(request, current_user, error="El 2FA no está activo.")
-    if not verify_totp(current_user.totp_secret, code):
+    if not verify_totp_for_user(current_user, code):
         return _render(request, current_user, error="Código incorrecto: no se desactivó el 2FA.")
     current_user.totp_secret = None
     current_user.totp_confirmed_at = None
+    current_user.last_totp_window = None
     db.commit()
     logger.info("2FA desactivado: user_id=%s", current_user.id)
     return _render(request, current_user, success="2FA desactivado.")
+
+
+@router.post("/ui/seguridad/2fa/regenerar-codigos", response_class=HTMLResponse)
+def totp_regenerate_recovery_codes(
+    request: Request,
+    code: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    """Regenera los 10 códigos de recuperación. Requiere un TOTP válido.
+
+    Los códigos viejos (no usados) se invalidan. Se muestran UNA sola vez.
+    """
+    if not current_user.totp_enabled:
+        return _render(request, current_user, error="Activa 2FA primero.")
+    if not verify_totp_for_user(current_user, code):
+        return _render(request, current_user, error="Código incorrecto: no se regeneraron los códigos.")
+    db.commit()
+    recovery_codes = regenerate_for_user(db, current_user)
+    logger.info("Recovery codes regenerados: user_id=%s", current_user.id)
+    return templates.TemplateResponse(
+        "security/settings.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "success": "Códigos regenerados. Guarda los nuevos; los anteriores ya no sirven.",
+            "recovery_codes": recovery_codes,
+        },
+    )
 
 
 # --- Cambio de contraseña de la cuenta ---

@@ -132,3 +132,13 @@ Orden por riesgo × esfuerzo.
   `User.password_changed_at` (NOT NULL, migración `c9d5f2b4e3a1`). Si iat <
   password_changed_at, la cookie se rechaza. El cambio de contraseña
   reemite la cookie para no desloguear al propio usuario. 3 tests nuevos.
+- **S8.** Anti-replay TOTP. `User.last_totp_window` (BigInteger, migración
+  `d8e6a3c5f4b2`). `verify_totp_for_user` compara la ventana del código con
+  la última usada; si es <=, se rechaza. Aplicado a login web, login de
+  extensión, confirmar/desactivar 2FA. 4 tests nuevos.
+- **S7.** Recovery codes para 2FA. Tabla `recovery_codes` (migración
+  `e9f7b4d6a5c3`). 10 códigos `XXXX-XXXX-XXXX` hasheados bcrypt, generados
+  al confirmar 2FA y al regenerarlos. Se muestran UNA sola vez en
+  `/seguridad`. Login web y extensión aceptan recovery code como alternativa
+  al TOTP. Cada código es de un solo uso. 10 tests nuevos en
+  `test_recovery_codes.py`.

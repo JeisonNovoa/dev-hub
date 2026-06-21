@@ -162,3 +162,78 @@ def test_extension_login_without_2fa_unchanged(client):
         "email": "test@devhub.local", "password": "password123",
     })
     assert res.status_code == 200
+
+
+# ─── Anti-replay TOTP (S8) ───────────────────────────────────────────────────
+
+def test_totp_code_cannot_be_reused_for_login(unauth_client, db, auth_user):
+    """Tras un login exitoso, el mismo código no puede usarse otra vez."""
+    from app.routers.api.extension import _LOGIN_ATTEMPTS  # noqa: F401 (import para clear)
+    from app.routers.api import extension as _ext
+    _ext._LOGIN_ATTEMPTS.clear()
+
+    totp = _enable_totp(db, auth_user)
+    code = totp.now()
+
+    # Primer login con este código → OK.
+    res = unauth_client.post("/api/extension/login", json={
+        "email": "test@devhub.local",
+        "password": "password123",
+        "totp_code": code,
+    })
+    assert res.status_code == 200
+
+    # Limpiar rate-limit entre llamadas (10/min).
+    _ext._LOGIN_ATTEMPTS.clear()
+
+    # Reusar el MISMO código en otra petición → 401.
+    res = unauth_client.post("/api/extension/login", json={
+        "email": "test@devhub.local",
+        "password": "password123",
+        "totp_code": code,
+    })
+    assert res.status_code == 401
+
+
+def test_totp_window_stored_after_successful_login(db, auth_user):
+    """Verifica que last_totp_window se setea al verificar un código."""
+    from app.auth import verify_totp_for_user
+    totp = _enable_totp(db, auth_user)
+    code = totp.now()
+    assert auth_user.last_totp_window is None
+    assert verify_totp_for_user(auth_user, code) is True
+    db.commit()
+    db.refresh(auth_user)
+    assert auth_user.last_totp_window is not None
+    # El código ya no sirve.
+    assert verify_totp_for_user(auth_user, code) is False
+
+
+def test_totp_next_window_accepted(db, auth_user):
+    """_totp_window_for devuelve la ventana correcta para un código dado."""
+    import time as _time
+    from app.auth import _totp_window_for
+    totp = _enable_totp(db, auth_user)
+    now = _time.time()
+    # Código generado para la ventana actual.
+    current_window = int(now // 30)
+    code = totp.at(current_window * 30)
+    window = _totp_window_for(code, auth_user.totp_secret, for_time=now)
+    # Debe caer dentro de la ventana actual (o ±1 por la tolerancia).
+    assert window is not None
+    assert abs(window - current_window) <= 1
+
+
+def test_totp_disable_clears_last_window(client, db, auth_user):
+    """Al desactivar 2FA, last_totp_window se reinicia."""
+    totp = _enable_totp(db, auth_user)
+    # Simular un uso previo backdateando last_totp_window a la ventana anterior.
+    import time as _time
+    auth_user.last_totp_window = int(_time.time() // 30) - 2
+    db.commit()
+    db.refresh(auth_user)
+    # Desactivar con código fresco de la ventana actual
+    res = client.post("/ui/seguridad/2fa/desactivar", data={"code": totp.now()})
+    assert "desactivado" in res.text or res.status_code == 200
+    db.refresh(auth_user)
+    assert auth_user.last_totp_window is None

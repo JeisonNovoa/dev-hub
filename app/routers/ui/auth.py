@@ -11,7 +11,7 @@ from app.auth import (
     hash_password,
     read_totp_pending_token,
     verify_password,
-    verify_totp,
+    verify_totp_for_user,
 )
 from app.database import get_db
 from app.dependencies import get_current_user_optional
@@ -94,6 +94,7 @@ def login_totp(
     request: Request,
     pending_token: str = Form(...),
     code: str = Form(...),
+    recovery_code: str = Form(default=""),
     db: Session = Depends(get_db),
 ) -> Response:
     user_id = read_totp_pending_token(pending_token)
@@ -104,7 +105,24 @@ def login_totp(
         logger.warning("Paso 2FA con token inválido o vencido")
         return RedirectResponse(url="/login", status_code=303)
 
-    if not verify_totp(user.totp_secret, code):
+    # Aceptar TOTP (con anti-replay) o recovery code de un solo uso.
+    from app.services.recovery_codes import use_recovery_code
+    used_recovery = False
+    if recovery_code.strip():
+        used_recovery = use_recovery_code(db, user, recovery_code)
+        if not used_recovery:
+            logger.warning("Recovery code inválido: user_id=%s", user.id)
+            return templates.TemplateResponse(
+                "auth/totp.html",
+                {
+                    "request": request,
+                    "current_user": None,
+                    "pending_token": pending_token,
+                    "error": "Código de recuperación inválido o ya usado.",
+                },
+                status_code=401,
+            )
+    elif not verify_totp_for_user(user, code):
         logger.warning("Código 2FA incorrecto: user_id=%s", user.id)
         return templates.TemplateResponse(
             "auth/totp.html",
@@ -118,9 +136,12 @@ def login_totp(
         )
 
     from app.config import settings
+    db.commit()  # Persistir last_totp_window o el used_at del recovery code.
     redirect = RedirectResponse(url="/", status_code=303)
     _set_session(redirect, user.id, secure=not settings.debug)
-    logger.info("Login exitoso con 2FA: user_id=%s", user.id)
+    logger.info(
+        "Login exitoso con 2FA: user_id=%s (recovery=%s)", user.id, used_recovery
+    )
     return redirect
 
 

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import BigInteger, Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.crypto import EncryptedText
@@ -23,6 +23,9 @@ class User(Base, TimestampMixin):
     # el usuario lo confirmó con un código válido (totp_confirmed_at no nulo).
     totp_secret: Mapped[str | None] = mapped_column(EncryptedText, nullable=True, default=None)
     totp_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    # Anti-replay TOTP: la ventana (counter = floor(time/30s)) del último código
+    # aceptado. Si un código se reusa en la misma ventana, se rechaza.
+    last_totp_window: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=None)
 
     @property
     def totp_enabled(self) -> bool:
