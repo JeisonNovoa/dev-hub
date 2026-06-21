@@ -51,7 +51,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             set_csrf_cookie(
                 response,
                 generate_csrf_token(),
-                secure=not settings.debug,
+                secure=settings.cookies_secure,
             )
         return response
 

@@ -83,7 +83,7 @@ def login(
 
     from app.config import settings
     redirect = RedirectResponse(url="/", status_code=303)
-    _set_session(redirect, user.id, secure=not settings.debug)
+    _set_session(redirect, user.id, secure=settings.cookies_secure)
     logger.info("Login exitoso: user_id=%s", user.id)
     return redirect
 
@@ -138,7 +138,7 @@ def login_totp(
     from app.config import settings
     db.commit()  # Persistir last_totp_window o el used_at del recovery code.
     redirect = RedirectResponse(url="/", status_code=303)
-    _set_session(redirect, user.id, secure=not settings.debug)
+    _set_session(redirect, user.id, secure=settings.cookies_secure)
     logger.info(
         "Login exitoso con 2FA: user_id=%s (recovery=%s)", user.id, used_recovery
     )
@@ -207,7 +207,7 @@ def register(
 
     from app.config import settings
     redirect = RedirectResponse(url="/", status_code=303)
-    _set_session(redirect, user.id, secure=not settings.debug)
+    _set_session(redirect, user.id, secure=settings.cookies_secure)
     return redirect
 
 

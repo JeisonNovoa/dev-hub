@@ -131,8 +131,7 @@ descifra correctamente antes de subirlo.
 ```bash
 # 1. Descargar el artefacto desde GitHub → Actions → corrida → Artifacts
 # 2. Descifrar y descomprimir
-openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \
-  -pass pass:TU_PASSPHRASE -in devhub_FECHA.sql.gz.enc -out devhub.sql.gz
+gpg --batch --passphrase TU_PASSPHRASE -d devhub_FECHA.sql.gz.gpg > devhub.sql.gz
 gunzip devhub.sql.gz
 
 # 3. Restaurar contra una base vacía (¡cuidado: psql ejecuta el dump completo!)

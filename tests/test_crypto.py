@@ -40,8 +40,10 @@ def test_decrypt_with_old_key_fallback(fresh_keys):
     old_key = Fernet.generate_key().decode()
     ciphertext = Fernet(old_key.encode()).encrypt(b"secreto-viejo").decode()
 
-    # Sin la clave vieja configurada → devuelve el token tal cual.
-    assert crypto.decrypt(ciphertext) == ciphertext
+    # Sin la clave vieja configurada → devuelve un marcador claro (no el token).
+    result = crypto.decrypt(ciphertext)
+    assert result != ciphertext
+    assert "no se pudo descifrar" in result
 
     fresh_keys.setattr(settings, "old_encryption_keys", old_key)
     crypto._fernets.cache_clear()
@@ -62,7 +64,9 @@ def test_unwrap_double_encryption(fresh_keys):
 def test_unknown_key_logs_warning(fresh_keys, caplog):
     foreign = Fernet(Fernet.generate_key()).encrypt(b"x").decode()
     with caplog.at_level(logging.WARNING, logger="app.crypto"):
-        assert crypto.decrypt(foreign) == foreign
+        result = crypto.decrypt(foreign)
+    assert result != foreign  # no filtra el token crudo
+    assert "no se pudo descifrar" in result
     assert any("OLD_ENCRYPTION_KEYS" in r.message for r in caplog.records)
 
 

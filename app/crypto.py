@@ -53,11 +53,18 @@ def decrypt(value: str | None) -> str | None:
     plain = _decrypt_once(value)
     if plain is None:
         if looks_encrypted(value):
+            # El valor parecía cifrado pero ninguna clave lo descifra. Antes
+            # devolvíamos el token crudo, lo que podía filtrarse a la UI como
+            # si fuera la contraseña real. Ahora devolvemos un marcador claro
+            # para que el usuario lo vea y pueda reparar (rotar claves o
+            # reingresar la credencial). No lanzamos excepción porque rompería
+            # queries enteros por una sola fila corrupta.
             logger.warning(
-                "Valor cifrado con una clave desconocida — se devuelve el token tal cual. "
+                "Valor cifrado con una clave desconocida — devolviendo marcador. "
                 "Agrega la clave original en OLD_ENCRYPTION_KEYS y corre "
                 "scripts/reencrypt_credentials.py para repararlo de forma permanente."
             )
+            return "[ERROR: no se pudo descifrar — rota claves o reingresa la credencial]"
         # Dato en texto plano (anterior al cifrado) — se devuelve tal cual.
         return value
 

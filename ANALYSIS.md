@@ -142,3 +142,25 @@ Orden por riesgo × esfuerzo.
   `/seguridad`. Login web y extensión aceptan recovery code como alternativa
   al TOTP. Cada código es de un solo uso. 10 tests nuevos en
   `test_recovery_codes.py`.
+- **S11.** `crypto.decrypt` ya no devuelve el token crudo si falla el
+  descifrado: ahora devuelve un marcador claro `[ERROR: no se pudo
+  descifrar...]` que el usuario reconoce. Evita que un ciphertext filtrado
+  se vea como contraseña real en la UI.
+- **S12.** Cookie Secure por variable explícita `COOKIE_SECURE`
+  (`config.py`). Default: inferir de `debug`. Si la seteas explícitamente
+  en `.env`, gana sobre `debug`. Evita shippear con DEBUG=True y cookies
+  inseguras por accidente.
+- **S9.** `scripts/reencrypt_credentials.py` refactorizado para correr todo
+  el loop dentro de una sola transacción (rollback ante falla). Helper
+  `_recover_plain` distingue None real (irrecuperable) de plaintext.
+  `_process_rows` separa la lógica de la escritura. 1 test nuevo
+  (`test_reencrypt_rollback_on_failure`).
+- **S10.** Backup con GPG AES-256 + MDC (integridad autenticada) en vez de
+  `openssl AES-256-CBC` (sin integridad). Si el artefacto se altera en
+  GitHub, el descifrado falla limpiamente. README actualizado con el
+  comando de restauración nuevo.
+- **S13.** `bleach` (deprecated 2023) reemplazado por `nh3` (Rust, mantenido).
+  Mismas tags y atributos permitidos; nh3 agrega `rel="noopener noreferrer"`
+  automáticamente. requirements.txt actualizado.
+
+**Bloque de seguridad COMPLETO (S1-S13).** Suite: 296 tests verdes.

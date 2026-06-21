@@ -5,6 +5,11 @@
 #   BACKUP_PASSPHRASE  — frase con la que se cifra el dump (¡guárdala fuera de Dev Hub!)
 #
 # Restaurar: ver sección "Backups" del README.
+#
+# Cifrado: GPG simétrico con AES-256 y MDC (Modification Detection Code).
+# A diferencia de openssl AES-256-CBC, GPG incluye integridad autenticada:
+# si el artefacto se altera, el descifrado falla limpiamente en vez de
+# producir datos corruptos silenciosamente.
 
 name: Backup de la base de datos
 
@@ -28,7 +33,7 @@ jobs:
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y -qq postgresql-client-17
 
-      - name: Dump comprimido y cifrado (AES-256)
+      - name: Dump comprimido y cifrado (GPG AES-256 con MDC)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
@@ -45,18 +50,21 @@ jobs:
           "$PG_DUMP" "$CLEAN_URL" --no-owner --no-privileges | gzip -9 > "$FILE"
           # Un dump sano de esta BD jamás es tan pequeño: aborta si vino vacío
           test "$(stat -c%s "$FILE")" -gt 1024
-          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt \
-            -pass env:BACKUP_PASSPHRASE -in "$FILE" -out "$FILE.enc"
+          # Cifrado simétrico AES-256 con integridad (MDC). --force-mdc es no-op
+          # en GPG 2.x (MDC es default) pero lo dejamos explícito por documentación.
+          gpg --batch --yes --passphrase "$BACKUP_PASSPHRASE" \
+              --symmetric --cipher-algo AES256 --force-mdc \
+              -o "$FILE.gpg" "$FILE"
           shred -u "$FILE"
-          echo "FILE_ENC=$FILE.enc" >> "$GITHUB_ENV"
+          echo "FILE_ENC=$FILE.gpg" >> "$GITHUB_ENV"
 
       - name: Verificar que el backup es restaurable (descifrado de prueba)
         env:
           BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
           set -euo pipefail
-          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \
-            -pass env:BACKUP_PASSPHRASE -in "$FILE_ENC" -out check.sql.gz
+          gpg --batch --yes --passphrase "$BACKUP_PASSPHRASE" \
+              -d "$FILE_ENC" > check.sql.gz
           gunzip -c check.sql.gz > check.sql
           grep -q "PostgreSQL database dump" check.sql
           grep -q "CREATE TABLE" check.sql
@@ -67,6 +75,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: devhub-backup-${{ github.run_id }}
-          path: "*.sql.gz.enc"
+          path: "*.sql.gz.gpg"
           retention-days: 30
           if-no-files-found: error

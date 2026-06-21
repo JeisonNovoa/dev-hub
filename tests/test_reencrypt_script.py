@@ -86,3 +86,39 @@ def test_dry_run_does_not_write(scratch_db, monkeypatch):
 
     assert reencrypt(dry_run=True, assume_yes=True) == 0
     assert _raw_passwords(scratch_db)["vieja"] == token
+
+
+def test_reencrypt_rollback_on_failure(scratch_db, monkeypatch):
+    """Si el script falla a mitad, la BD queda consistente (rollback)."""
+    old_key = Fernet.generate_key().decode()
+    token = Fernet(old_key.encode()).encrypt(b"pass1").decode()
+    _insert_raw(scratch_db, "cred-a", token)
+    _insert_raw(scratch_db, "cred-b", "plaintext-pass")
+
+    monkeypatch.setattr(settings, "old_encryption_keys", old_key)
+    crypto._fernets.cache_clear()
+
+    # Patchear el write_fn para que falle en la segunda llamada.
+    import scripts.reencrypt_credentials as rc
+    original = rc._process_rows
+    call_count = {"n": 0}
+
+    def failing_write(cred_id, value):
+        call_count["n"] += 1
+        if call_count["n"] >= 2:
+            raise RuntimeError("boom")
+
+    def patched(rows, write_fn):
+        return original(rows, write_fn=failing_write)
+
+    monkeypatch.setattr(rc, "_process_rows", patched)
+
+    import pytest as _pytest
+    with _pytest.raises(RuntimeError):
+        reencrypt(dry_run=False, assume_yes=True)
+
+    # La BD no debe tener cambios parciales: cred-b sigue plaintext,
+    # cred-a sigue con su token viejo.
+    raw = _raw_passwords(scratch_db)
+    assert raw["cred-b"] == "plaintext-pass"
+    assert raw["cred-a"] == token

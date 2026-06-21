@@ -28,7 +28,7 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.config import settings
-from app.crypto import _fernets, decrypt, looks_encrypted
+from app.crypto import _decrypt_once, _fernets, looks_encrypted
 from app.models import Credential
 
 from cryptography.fernet import InvalidToken
@@ -43,6 +43,68 @@ def _decrypted_with_primary(raw: str) -> str | None:
         return _fernets()[0].decrypt(raw.encode()).decode()
     except InvalidToken:
         return None
+
+
+def _recover_plain(raw: str) -> str | None:
+    """Intenta descifrar con todas las claves y deshacer doble cifrado.
+
+    Devuelve el plaintext si lo logra, o None si ninguna clave lo descifra.
+    No llama a app.crypto.decrypt() porque esa función devuelve un marcador
+    para el caso irrecuperable; aquí necesitamos distinguir None.
+    """
+    # Si no parece cifrado, es plaintext (dato previo al cifrado) → tal cual.
+    if not looks_encrypted(raw):
+        return raw
+    plain = _decrypt_once(raw)
+    if plain is None:
+        return None
+    depth = 0
+    while looks_encrypted(plain) and depth < 3:
+        inner = _decrypt_once(plain)
+        if inner is None:
+            break
+        plain = inner
+        depth += 1
+    return plain
+
+
+def _process_rows(rows, write_fn) -> tuple[int, int, int, int]:
+    """Recorre filas (id, label, password cruda), decide acción y escribe.
+
+    Devuelve (ok, fixed, unrecoverable, empty).
+    write_fn(cred_id, value) persiste el valor re-cifrado; en dry-run es no-op.
+    """
+    ok = fixed = unrecoverable = empty = 0
+    for row in rows:
+        raw = row.password
+        if not raw:
+            empty += 1
+            continue
+
+        plain = _recover_plain(raw)
+
+        if plain is None and looks_encrypted(raw):
+            unrecoverable += 1
+            print(f"  ! IRRECUPERABLE  #{row.id} {row.label} — ninguna clave la descifra")
+            continue
+
+        # Ya está cifrada con la clave primaria en una sola capa → nada que hacer.
+        if (
+            _decrypted_with_primary(raw) is not None
+            and plain is not None
+            and _decrypted_with_primary(raw) == plain
+        ):
+            ok += 1
+            continue
+
+        fixed += 1
+        reason = "texto plano" if not looks_encrypted(raw) else "clave vieja o doble cifrado"
+        print(f"  > re-cifrando   #{row.id} {row.label} ({reason})")
+        # Pasamos el plaintext al write_fn; EncryptedText.process_bind_param
+        # lo re-cifrará con la clave primaria. Pasar el ciphertext ya cifrado
+        # produciría doble cifrado.
+        write_fn(row.id, plain)
+    return ok, fixed, unrecoverable, empty
 
 
 def reencrypt(dry_run: bool, assume_yes: bool) -> int:
@@ -63,37 +125,31 @@ def reencrypt(dry_run: bool, assume_yes: bool) -> int:
     db = sessionmaker(bind=engine)()
 
     # SQL textual para leer el valor CRUDO almacenado, sin pasar por EncryptedText.
-    rows = db.execute(text("SELECT id, label, password FROM credentials ORDER BY id")).all()
-
+    # En modo apply todo el loop corre dentro de una sola transacción: si algo
+    # falla a mitad, rollback (importante cuando se corre contra Postgres
+    # compartido local+prod mientras hay tráfico de lecturas). En dry-run no
+    # abrimos transacción porque no escribimos nada.
     ok = fixed = unrecoverable = empty = 0
     try:
-        for row in rows:
-            raw = row.password
-            if not raw:
-                empty += 1
-                continue
+        rows = db.execute(
+            text("SELECT id, label, password FROM credentials ORDER BY id")
+        ).all()
 
-            plain = decrypt(raw)
+        def _write_apply(cred_id: int, value: str | None) -> None:
+            db.execute(
+                update(Credential).where(Credential.id == cred_id).values(password=value)
+            )
 
-            if plain == raw and looks_encrypted(raw):
-                unrecoverable += 1
-                print(f"  ! IRRECUPERABLE  #{row.id} {row.label} — ninguna clave la descifra")
-                continue
+        write_fn = (lambda *_a, **_kw: None) if dry_run else _write_apply
+        ok, fixed, unrecoverable, empty = _process_rows(rows, write_fn=write_fn)
 
-            # Ya está cifrada con la clave primaria en una sola capa → nada que hacer.
-            if _decrypted_with_primary(raw) == plain:
-                ok += 1
-                continue
-
-            fixed += 1
-            reason = "texto plano" if not looks_encrypted(raw) else "clave vieja o doble cifrado"
-            print(f"  > re-cifrando   #{row.id} {row.label} ({reason})")
-            if not dry_run:
-                # El UPDATE pasa por EncryptedText → cifra con la clave primaria.
-                db.execute(update(Credential).where(Credential.id == row.id).values(password=plain))
-
-        if not dry_run:
+        if dry_run:
+            db.rollback()  # nada que commitear
+        else:
             db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 

@@ -12,6 +12,17 @@ class Settings(BaseSettings):
     # (p. ej. tras rotar ENCRYPTION_KEY); todo lo nuevo se cifra con encryption_key.
     old_encryption_keys: str = ""
     secret_key: str  # obligatoria — genera una con: python -c "import secrets; print(secrets.token_hex(32))"
+    # Cookies seguras (Secure flag). None = inferir de `debug` (False en prod,
+    # True en dev para permitir HTTP). En prod siempre debe ser True; exponerlo
+    # como setting evita shippear con DEBUG=True y cookies inseguras por accidente.
+    cookie_secure: bool | None = None
+
+    @property
+    def cookies_secure(self) -> bool:
+        """True si las cookies deben llevar Secure flag."""
+        if self.cookie_secure is not None:
+            return self.cookie_secure
+        return not self.debug
 
     @field_validator("encryption_key")
     @classmethod

@@ -223,6 +223,6 @@ def password_save(
         max_age=86400 * 30,
         httponly=True,
         samesite="lax",
-        secure=not settings.debug,
+        secure=settings.cookies_secure,
     )
     return response
