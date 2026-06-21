@@ -26,10 +26,11 @@ def _as_utc(dt: datetime) -> datetime:
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     token = request.cookies.get(COOKIE_NAME)
     if token:
-        user_id = read_session_cookie(token)
-        if user_id is not None:
+        session = read_session_cookie(token)
+        if session is not None:
+            user_id, iat = session
             user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
-            if user:
+            if user and _session_still_valid(iat, user):
                 return user
     # Para peticiones HTMX devolvemos un header HX-Redirect en vez de 302 estándar
     if request.headers.get("HX-Request"):
@@ -49,10 +50,25 @@ def get_current_user_optional(
     token = request.cookies.get(COOKIE_NAME)
     if not token:
         return None
-    user_id = read_session_cookie(token)
-    if user_id is None:
+    session = read_session_cookie(token)
+    if session is None:
         return None
-    return db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
+    user_id, iat = session
+    user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
+    if not user or not _session_still_valid(iat, user):
+        return None
+    return user
+
+
+def _session_still_valid(iat: int, user: User) -> bool:
+    """True si la cookie fue emitida DESPUÉS del último cambio de contraseña."""
+    if iat <= 0:
+        # Cookie legacy sin iat: la aceptamos pero marcamos como inválida en
+        # el siguiente cambio de contraseña. Mientras tanto, pasa.
+        return True
+    changed_at = _as_utc(user.password_changed_at)
+    # Convertimos password_changed_at a epoch segundos para comparar con iat.
+    return iat >= int(changed_at.timestamp())
 
 
 def get_user_from_extension_token(request: Request, db: Session = Depends(get_db)) -> User:

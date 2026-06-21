@@ -10,6 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 from app.limiter import limiter
 from app.logging_config import configure_logging
+from app.middleware.csrf import CSRF_COOKIE, CsrfMiddleware, generate_csrf_token, set_csrf_cookie
 from app.routers.api import commands, credentials, env_vars, export, extension, links, me, projects, repos, services
 from app.routers.ui import auth as ui_auth
 from app.routers.ui import credentials as ui_credentials
@@ -44,6 +45,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         response.headers["Content-Security-Policy"] = _CSP
+        # Cookie CSRF doble-submit: si el navegador no la tiene, se setea en
+        # cualquier respuesta. app.js la leerá y la mandará como X-CSRFToken.
+        if CSRF_COOKIE not in request.cookies:
+            set_csrf_cookie(
+                response,
+                generate_csrf_token(),
+                secure=not settings.debug,
+            )
         return response
 
 
@@ -78,6 +87,7 @@ app = FastAPI(title=settings.app_name, lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CsrfMiddleware)
 
 logger.info("Iniciando %s", settings.app_name)
 

@@ -162,6 +162,7 @@
         </div>
       </div>
       <form method="post" action="/logout" class="shrink-0">
+        <input type="hidden" name="csrf_token" />
         <button type="submit" title="Salir"
                 class="p-1.5 rounded-md text-gray-600 hover:text-gray-300 hover:bg-surface transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,6 +192,9 @@
   {% if current_user %}
   {% include "partials/command_palette.html" %}
   {% endif %}
+
+  {# Rellena inputs hidden[name="csrf_token"] desde la cookie (doble-submit). #}
+  {% include "partials/csrf_form.html" %}
 
 </body>
 </html>

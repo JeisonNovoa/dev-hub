@@ -1,0 +1,16 @@
+{# Snippet reutilizable: rellena inputs hidden[name="csrf_token"] con el valor
+   de la cookie csrf_token (doble-submit cookie). El middleware compara el
+   valor del form contra la cookie.
+
+   Uso: poner <input type="hidden" name="csrf_token" /> dentro del form, e
+   incluir este snippet una vez por página (al final del {% block content %}).
+   No necesario para forms HTMX (app.js manda el header). #}
+<script>
+  (function () {
+    var match = document.cookie.match(/(^|; )csrf_token=([^;]*)/);
+    var token = match ? decodeURIComponent(match[2]) : '';
+    document.querySelectorAll('input[name="csrf_token"]').forEach(function (input) {
+      input.value = token;
+    });
+  })();
+</script>

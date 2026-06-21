@@ -1,6 +1,8 @@
 import hashlib
 import secrets
+import time
 from functools import lru_cache
+from typing import Any
 
 import pyotp
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -29,14 +31,31 @@ def _serializer() -> URLSafeTimedSerializer:
 
 
 def create_session_cookie(user_id: int) -> str:
-    return _serializer().dumps(user_id)
+    """Cookie con payload {uid, iat}.
+
+    iat = issued-at (epoch segundos). Si el usuario cambia su contraseña o
+    activa 2FA, password_changed_at se actualiza y cualquier cookie con
+    iat anterior queda inválida al comparar.
+    """
+    payload = {"uid": user_id, "iat": int(time.time())}
+    return _serializer().dumps(payload)
 
 
-def read_session_cookie(token: str, max_age: int = 86400 * 30) -> int | None:
+def read_session_cookie(token: str, max_age: int = 86400 * 30) -> tuple[int, int] | None:
+    """Devuelve (user_id, iat) si la cookie es válida y no expiró."""
     try:
-        return _serializer().loads(token, max_age=max_age)
+        payload: Any = _serializer().loads(token, max_age=max_age)
     except (SignatureExpired, BadSignature):
         return None
+    # Backward-compat: cookies viejas tenían solo el int del user_id.
+    if isinstance(payload, int):
+        return payload, 0
+    if isinstance(payload, dict):
+        uid = payload.get("uid")
+        iat = payload.get("iat", 0)
+        if isinstance(uid, int):
+            return uid, int(iat) if iat else 0
+    return None
 
 
 # --- 2FA (TOTP) ---

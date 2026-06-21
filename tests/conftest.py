@@ -18,6 +18,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-at-least-32-chars-long!!")
 from app.auth import COOKIE_NAME, create_session_cookie, hash_password  # noqa: E402
 from app.database import get_db  # noqa: E402
 from app.main import app  # noqa: E402
+from app.middleware.csrf import CSRF_COOKIE, CSRF_HEADER, generate_csrf_token  # noqa: E402
 from app.models.common import Base  # noqa: E402
 from app.models.user import User  # noqa: E402
 
@@ -85,7 +86,23 @@ def _make_client(db, cookies: dict | None = None) -> TestClient:
             pass
 
     app.dependency_overrides[get_db] = override_get_db
-    client = TestClient(app, cookies=cookies or {})
+    # Cookie CSRF compartida entre cliente y middleware (doble-submit).
+    csrf = generate_csrf_token()
+    merged_cookies = dict(cookies or {})
+    merged_cookies[CSRF_COOKIE] = csrf
+    client = TestClient(app, cookies=merged_cookies)
+    # Interceptar el request para inyectar el header X-CSRFToken en métodos
+    # no seguros (igual que hace app.js en el navegador).
+    _original_request = client.request
+
+    def _request_with_csrf(method, url, **kwargs):
+        if method.upper() in {"POST", "PUT", "PATCH", "DELETE"}:
+            headers = kwargs.pop("headers", None) or {}
+            headers.setdefault(CSRF_HEADER, csrf)
+            kwargs["headers"] = headers
+        return _original_request(method, url, **kwargs)
+
+    client.request = _request_with_csrf
     return client
 
 

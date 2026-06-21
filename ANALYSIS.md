@@ -122,3 +122,13 @@ Orden por riesgo × esfuerzo.
 - **S4.** Rate-limit por email añadido al login de extensión (10/min, ventana
   60s). Contador en memoria `_LOGIN_ATTEMPTS`. Fixture autouse resetea entre
   tests. 1 test nuevo.
+- **S3.** CSRF doble-submit cookie. Middleware `app/middleware/csrf.py`
+  valida header X-CSRFToken (HTMX) o campo form `csrf_token` (login/register/
+  logout) contra cookie csrf_token. Cookie seteada por SecurityHeaders
+  middleware. app.js inyecta header vía `htmx:configRequest`. Partial
+  `csrf_form.html` rellena inputs hidden. TestClient del conftest inyecta
+  CSRF automáticamente. 6 tests nuevos en `test_csrf.py`.
+- **S6.** Invalidación server-side de sesión. Cookie ahora lleva `{uid, iat}`;
+  `User.password_changed_at` (NOT NULL, migración `c9d5f2b4e3a1`). Si iat <
+  password_changed_at, la cookie se rechaza. El cambio de contraseña
+  reemite la cookie para no desloguear al propio usuario. 3 tests nuevos.

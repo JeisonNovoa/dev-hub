@@ -7,10 +7,11 @@ import pyotp
 import qrcode
 import qrcode.image.svg
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
-from app.auth import hash_password, verify_password, verify_totp
+from app.auth import COOKIE_NAME, create_session_cookie, hash_password, verify_password, verify_totp
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.jinja import templates
@@ -166,9 +167,21 @@ def password_save(
         return fail("La nueva contraseña debe ser distinta de la actual.")
 
     current_user.hashed_password = hash_password(new_password)
+    current_user.password_changed_at = datetime.now(timezone.utc)
     db.commit()
     logger.info("Contraseña de cuenta cambiada: user_id=%s", current_user.id)
-    return templates.TemplateResponse(
+    # Reemitir cookie: sin esto, el propio usuario se desloguearía al cambiar
+    # la contraseña porque la cookie actual tendría iat < password_changed_at.
+    response = templates.TemplateResponse(
         "security/partials/password_row.html",
         {"request": request, "current_user": current_user, "success": "Contraseña actualizada."},
     )
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=create_session_cookie(current_user.id),
+        max_age=86400 * 30,
+        httponly=True,
+        samesite="lax",
+        secure=not settings.debug,
+    )
+    return response
