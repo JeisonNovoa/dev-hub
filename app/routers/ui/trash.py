@@ -9,8 +9,7 @@ from app.dependencies import get_current_user
 from app.jinja import templates
 from app.models import Credential, Project, User
 from app.models.credential import TRASH_RETENTION_DAYS
-from app.routers.ui.credentials import _purge_expired
-from app.routers.ui.dashboard import _purge_expired_projects
+from app.services.trash import purge_expired_credentials, purge_expired_projects
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -22,8 +21,8 @@ def trash_page(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    _purge_expired_projects(db)
-    _purge_expired(db)
+    purge_expired_projects(db)
+    purge_expired_credentials(db)
     projects = (
         db.query(Project)
         .filter(Project.user_id == current_user.id, Project.deleted_at.isnot(None))

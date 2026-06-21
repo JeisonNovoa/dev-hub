@@ -104,8 +104,22 @@ def get_user_from_extension_token(request: Request, db: Session = Depends(get_db
 
 
 def get_project_or_404(slug: str, db: Session, current_user: User) -> Project:
+    # selectinload para evitar N+1: el detalle del proyecto accede a
+    # commands, env_vars, links, credentials, repos, services. Sin esto
+    # cada acceso dispara un round-trip a la BD (en Supabase con latencia
+    # de red se nota especialmente).
+    from sqlalchemy.orm import selectinload
+
     project = (
         db.query(Project)
+        .options(
+            selectinload(Project.commands),
+            selectinload(Project.env_vars),
+            selectinload(Project.links),
+            selectinload(Project.credentials),
+            selectinload(Project.repos),
+            selectinload(Project.services),
+        )
         .filter(Project.slug == slug, Project.user_id == current_user.id, Project.deleted_at.is_(None))
         .first()
     )

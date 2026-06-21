@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -22,8 +22,16 @@ def export_all(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
+    # selectinload para evitar N+1: export recorre env_vars, commands, links y
+    # repos por cada proyecto. Sin esto, exportar 10 proyectos = 40+ queries.
     projects = (
         db.query(Project)
+        .options(
+            selectinload(Project.env_vars),
+            selectinload(Project.commands),
+            selectinload(Project.links),
+            selectinload(Project.repos),
+        )
         .filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
         .order_by(Project.name)
         .all()

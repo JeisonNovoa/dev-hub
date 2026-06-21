@@ -71,12 +71,11 @@ async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONR
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.database import SessionLocal
-    from app.routers.ui.credentials import _purge_expired
-    from app.routers.ui.dashboard import _purge_expired_projects
+    from app.services.trash import purge_expired_credentials, purge_expired_projects
     db = SessionLocal()
     try:
-        _purge_expired(db)
-        _purge_expired_projects(db)
+        purge_expired_projects(db)
+        purge_expired_credentials(db)
     finally:
         db.close()
     yield

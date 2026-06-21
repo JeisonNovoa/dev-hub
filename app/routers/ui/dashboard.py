@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from slugify import slugify
-from sqlalchemy import Text, cast
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -13,6 +12,8 @@ from app.jinja import templates
 from app.models import Project, User
 from app.models.project import TRASH_RETENTION_DAYS
 from app.routers.ui.import_project import render_import_prompt
+from app.services.search import project_search_filter
+from app.utils.slugs import unique_project_slug
 from app.utils.activity import log_event
 from app.utils.projects import decorate
 
@@ -27,14 +28,7 @@ def _build_dashboard_context(q: str, status: str, db: Session, user: User) -> di
     lista 'recientes' (activos por última actualización) que pide el diseño.
     """
     base_query = db.query(Project).filter(Project.user_id == user.id, Project.deleted_at.is_(None))
-    if q:
-        like = f"%{q}%"
-        base_query = base_query.filter(
-            Project.name.ilike(like)
-            | Project.description.ilike(like)
-            | Project.notes.ilike(like)
-            | cast(Project.tech_stack, Text).ilike(like)
-        )
+    base_query = project_search_filter(base_query, q or None)
 
     all_projects = base_query.all()
     status_counts = {
@@ -201,15 +195,6 @@ def project_edit_save(
     return Response(status_code=200, headers={"HX-Redirect": "/"})
 
 
-def _unique_slug(db: Session, base_slug: str, user_id: int) -> str:
-    slug = base_slug
-    counter = 2
-    while db.query(Project).filter(Project.slug == slug, Project.user_id == user_id).first():
-        slug = f"{base_slug}-{counter}"
-        counter += 1
-    return slug
-
-
 @router.post("/ui/projects/new")
 def create_project_form(
     request: Request,
@@ -220,7 +205,7 @@ def create_project_form(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
-    slug = _unique_slug(db, slugify(name), current_user.id)
+    slug = unique_project_slug(db, slugify(name), current_user.id)
     tech_stack = [t.strip() for t in tech_stack_raw.split(",") if t.strip()]
     project = Project(
         name=name,
@@ -251,19 +236,3 @@ def dashboard_cards(
     context = _build_dashboard_context(q, status, db, current_user)
     context["request"] = request
     return templates.TemplateResponse("partials/project_cards.html", context)
-
-
-def _purge_expired_projects(db: Session) -> int:
-    cutoff = datetime.now(timezone.utc) - timedelta(days=TRASH_RETENTION_DAYS)
-    expired = (
-        db.query(Project)
-        .filter(Project.deleted_at.isnot(None), Project.deleted_at < cutoff)
-        .all()
-    )
-    count = len(expired)
-    for project in expired:
-        db.delete(project)
-    if count:
-        db.commit()
-        logger.info("Papelera: %d proyecto(s) expirado(s) eliminado(s) permanentemente", count)
-    return count

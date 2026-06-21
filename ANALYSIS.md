@@ -164,3 +164,19 @@ Orden por riesgo × esfuerzo.
   automáticamente. requirements.txt actualizado.
 
 **Bloque de seguridad COMPLETO (S1-S13).** Suite: 296 tests verdes.
+
+- **A6.** Modelos `user_id: Mapped[int | None]` → `Mapped[int]` en Project,
+  Service, Credential (alineado con NOT NULL en BD desde migración
+  `a4f9c2e81d30`). Tests de reencrypt actualizados para crear user_id=1.
+- **A3.** `app/utils/slugs.py` extraído con `unique_project_slug` y
+  `unique_repo_slug`. Eliminadas las 2 copias duplicadas en
+  `dashboard.py` y `import_project.py`.
+- **A7.** `app/services/trash.py` con `purge_expired_credentials` y
+  `purge_expired_projects`. Eliminadas las funciones privadas de
+  `routers/ui/credentials.py` y `routers/ui/dashboard.py`. Import circular
+  resuelto (`main.py` y `trash.py` ya no importan privados de routers).
+- **A2.** `app/services/search.py` con `project_search_filter`. Unificadas
+  las 3 copias del filter ilike en `projects.py`, `dashboard.py`, `search.py`.
+- **A5.** `selectinload` aplicado a `get_project_or_404` (commands, env_vars,
+  links, credentials, repos, services) y a `export.py` (env_vars, commands,
+  links, repos). Evita N+1 en Supabase con latencia de red.

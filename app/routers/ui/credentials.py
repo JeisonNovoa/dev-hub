@@ -448,17 +448,3 @@ def _query_credentials(
     col = _SORT_COLS.get(sort, Credential.label)
     query = query.order_by(col.desc() if order == "desc" else col.asc())
     return query.all()
-
-
-def _purge_expired(db: Session) -> int:
-    cutoff = datetime.now(timezone.utc) - timedelta(days=TRASH_RETENTION_DAYS)
-    expired = (
-        db.query(Credential)
-        .filter(Credential.deleted_at.isnot(None), Credential.deleted_at < cutoff)
-    )
-    count = expired.count()
-    if count:
-        expired.delete(synchronize_session=False)
-        db.commit()
-        logger.info("Papelera: %d credencial(es) expirada(s) eliminada(s) permanentemente", count)
-    return count

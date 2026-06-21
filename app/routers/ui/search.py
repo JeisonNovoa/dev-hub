@@ -11,13 +11,13 @@ import logging
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
-from sqlalchemy import Text, cast
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.jinja import templates
 from app.models import Command, Credential, Project, QuickLink, User
+from app.services.search import project_search_filter
 from app.utils.url import extract_domain
 
 router = APIRouter()
@@ -51,16 +51,13 @@ def global_search(
     uid = current_user.id
 
     # --- Proyectos ---
+    base = db.query(Project).filter(
+        Project.user_id == uid,
+        Project.deleted_at.is_(None),
+    )
+    base = project_search_filter(base, query)
     projects = (
-        db.query(Project)
-        .filter(
-            Project.user_id == uid,
-            Project.deleted_at.is_(None),
-            Project.name.ilike(like)
-            | Project.description.ilike(like)
-            | cast(Project.tech_stack, Text).ilike(like),
-        )
-        .order_by(Project.updated_at.desc())
+        base.order_by(Project.updated_at.desc())
         .limit(_PER_GROUP_LIMIT)
         .all()
     )

@@ -13,29 +13,9 @@ from sqlalchemy.orm import Session
 
 from app.models import Command, EnvVariable, Project, QuickLink, Repo, Service
 from app.schemas.import_project import ProjectImport
+from app.utils.slugs import unique_project_slug, unique_repo_slug
 
 logger = logging.getLogger(__name__)
-
-
-def _unique_project_slug(name: str, user_id: int, db: Session) -> str:
-    base = slugify(name) or "proyecto"
-    candidate = base
-    n = 1
-    while db.query(Project).filter(Project.slug == candidate, Project.user_id == user_id).first():
-        n += 1
-        candidate = f"{base}-{n}"
-    return candidate
-
-
-def _unique_repo_slug(name: str, used: set[str]) -> str:
-    base = slugify(name) or "repo"
-    candidate = base
-    n = 1
-    while candidate in used:
-        n += 1
-        candidate = f"{base}-{n}"
-    used.add(candidate)
-    return candidate
 
 
 def import_project(data: ProjectImport, user_id: int, db: Session) -> tuple[Project, dict[str, int]]:
@@ -43,7 +23,7 @@ def import_project(data: ProjectImport, user_id: int, db: Session) -> tuple[Proj
 
     Devuelve el proyecto creado y el conteo de items creados por tipo.
     """
-    slug = _unique_project_slug(data.name, user_id, db)
+    slug = unique_project_slug(db, slugify(data.name) or "proyecto", user_id)
     project = Project(
         name=data.name,
         slug=slug,
@@ -72,7 +52,7 @@ def import_project(data: ProjectImport, user_id: int, db: Session) -> tuple[Proj
         repo = Repo(
             project_id=project.id,
             name=r.name,
-            slug=_unique_repo_slug(r.name, used_repo_slugs),
+            slug=unique_repo_slug(r.name, used_repo_slugs),
             local_path=r.local_path,
             github_url=r.github_url,
             description=r.description,

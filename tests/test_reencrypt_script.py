@@ -17,6 +17,14 @@ def scratch_db(tmp_path, monkeypatch):
     url = f"sqlite:///{db_path}"
     engine = create_engine(url)
     Base.metadata.create_all(bind=engine)
+    # Necesitamos un user_id=1 para satisfacer NOT NULL en credentials.
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO users (id, email, hashed_password, is_active, password_changed_at, created_at, updated_at) "
+                "VALUES (1, 'test@devhub.local', 'x', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+        )
     monkeypatch.setattr(settings, "database_url", url)
     crypto._fernets.cache_clear()
     yield engine
@@ -28,8 +36,8 @@ def _insert_raw(engine, label: str, raw_password: str | None) -> None:
     with engine.begin() as conn:
         conn.execute(
             text(
-                "INSERT INTO credentials (label, password, category, login_via, created_at, updated_at) "
-                "VALUES (:label, :pw, 'personal', 'email', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                "INSERT INTO credentials (user_id, label, password, category, login_via, created_at, updated_at) "
+                "VALUES (1, :label, :pw, 'personal', 'email', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             ),
             {"label": label, "pw": raw_password},
         )
