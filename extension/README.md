@@ -19,9 +19,8 @@ Funciona en Chrome, Edge y Brave. **Costo: $0** (se usa en modo desarrollador).
 
 1. Clic en el ícono de la extensión.
 2. **Inicia sesión** con tu email y contraseña de Dev Hub (como en la web).
-   - La extensión usa por defecto el servidor configurado en `background.js`
-     (`DEFAULT_API_URL`). Si tu Dev Hub está en otro dominio, ábrelo en
-     "Configuración avanzada" y pon la URL — si no, déjalo vacío.
+   - La extensión apunta a `https://dev-hub-whry8q.fly.dev` (hardcodeado en
+     `background.js`). Si el dominio cambia, actualiza `DEFAULT_API_URL` ahí.
 3. **Crea tu PIN** de desbloqueo (numérico, mínimo 4 dígitos — ej. `2026`). Esto
    solo se pide una vez.
 4. Listo. De ahí en adelante, cuando la bóveda esté bloqueada solo te pedirá el

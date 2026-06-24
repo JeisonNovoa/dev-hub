@@ -613,8 +613,7 @@ async function loadVault() {
     $('vault-empty').hidden = true;
     $('vault-error').textContent =
       `No se pudo cargar la bóveda: ${vault.error || 'error de conexión'}. ` +
-      'Si tu Dev Hub está en Render gratis puede estar despertando — espera ~30s y reintenta. ' +
-      'Si persiste, revisa la URL del servidor (cerrar sesión → configuración avanzada).';
+      'Si persiste, cierra sesión y vuelve a iniciarla.';
     $('vault-error').hidden = false;
     return;
   }
@@ -795,16 +794,10 @@ $('form-submit').addEventListener('click', async () => {
 
 wireEyeToggle('login-pwd-toggle', 'login-password');
 
-$('login-advanced-toggle').addEventListener('click', () => {
-  const adv = $('login-advanced');
-  adv.hidden = !adv.hidden;
-});
-
 $('login-submit').addEventListener('click', async () => {
   $('login-error').hidden = true;
   const email = $('login-email').value.trim();
   const password = $('login-password').value;
-  const apiUrl = $('login-url').value.trim();
   const totpCode = $('login-totp').value.trim();
 
   if (!email || !password) return showError('login-error', 'Email y contraseña son obligatorios');
@@ -813,7 +806,7 @@ $('login-submit').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = 'Entrando…';
   try {
-    const res = await send({ type: 'LOGIN', email, password, apiUrl, totpCode, deviceName: 'Chrome' });
+    const res = await send({ type: 'LOGIN', email, password, totpCode, deviceName: 'Chrome' });
     if (!res.ok) {
       // La cuenta tiene 2FA: revelar el campo del código y pedir reintento.
       if ((res.error || '').includes('2FA')) {

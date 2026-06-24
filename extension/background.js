@@ -6,8 +6,6 @@
 
 import { encryptWithPin, decryptWithPin } from './crypto.js';
 
-// URL por defecto de tu Dev Hub. Si tu instancia está en otro dominio, se puede
-// cambiar desde "configuración avanzada" en el popup (queda guardada en storage).
 const DEFAULT_API_URL = 'https://dev-hub-whry8q.fly.dev';
 
 const UNLOCK_MS = 5 * 60 * 1000;       // ventana de desbloqueo (deslizante)
@@ -63,13 +61,12 @@ async function status() {
 
 // ─── Llamadas a la API ───────────────────────────────────────────────────────
 
-async function resolveApiUrl() {
-  const { apiUrl } = await getLocal(['apiUrl']);
-  return (apiUrl || DEFAULT_API_URL).replace(/\/+$/, '');
+function resolveApiUrl() {
+  return DEFAULT_API_URL;
 }
 
 async function api(path, { method = 'GET', body = null, token = null } = {}) {
-  const apiUrl = await resolveApiUrl();
+  const apiUrl = resolveApiUrl();
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(`${apiUrl}${path}`, {
@@ -95,10 +92,7 @@ async function api(path, { method = 'GET', body = null, token = null } = {}) {
 
 // Paso 1: login con email+contraseña. Crea el token pero aún no se guarda cifrado
 // (eso ocurre al definir el PIN). El token queda desbloqueado en sesión.
-async function handleLogin({ apiUrl, email, password, totpCode, deviceName }) {
-  if (apiUrl && apiUrl.trim()) {
-    await chrome.storage.local.set({ apiUrl: apiUrl.trim().replace(/\/+$/, '') });
-  }
+async function handleLogin({ email, password, totpCode, deviceName }) {
   const data = await api('/api/extension/login', {
     method: 'POST',
     body: { email, password, name: deviceName || 'Chrome', totp_code: totpCode || null },
