@@ -192,19 +192,63 @@ El script reporta cuáles credenciales quedaron irrecuperables (si ninguna clave
 
 ## Deploy en Fly.io + Supabase
 
-1. Crear proyecto en [Supabase](https://supabase.com) y copiar la URL del **Session Pooler** (puerto 5432)
-2. Subir el repo a GitHub y conectar en [fly.io](https://fly.io) como Web Service
-3. En Fly.io → Secrets (o en el formulario inicial), configurar:
-   - `DATABASE_URL` → URL de Supabase Session Pooler con `+psycopg2`
-   - `ENCRYPTION_KEY` → genera una nueva con el comando de arriba
-   - `SECRET_KEY` → genera una nueva con el comando de arriba
-4. El `fly.toml` y el `Dockerfile` ya tienen todo configurado — Alembic corre automáticamente en cada deploy
+La app corre siempre activa en el free tier de Fly.io (1 VM shared-cpu-1x / 256 MB).
+Las migraciones de Alembic corren automáticamente antes de cada deploy.
+
+### Requisitos previos
+
+```powershell
+# Instalar flyctl (una sola vez)
+iwr https://fly.io/install.ps1 -useb | iex
+
+# Autenticarse (abre el navegador)
+fly auth login
+```
+
+### Primer deploy (app nueva)
+
+```powershell
+# 1. Crear la app en Fly.io
+fly apps create dev-hub-whry8q
+
+# 2. Configurar los secrets (nunca van en el código)
+fly secrets set `
+  DATABASE_URL="postgresql+psycopg2://usuario:pass@host:5432/postgres" `
+  ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" `
+  SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+
+# 3. Deployar
+fly deploy
+```
+
+> La `DATABASE_URL` es la URL del **Session Pooler** de Supabase (puerto 5432).
+> Agrega `+psycopg2` al esquema: `postgresql+psycopg2://...`
 
 La primera migración crea un usuario admin seed:
 - Email: `admin@devhub.local`
 - Contraseña: `changeme`
 
-Regístrate con tu cuenta real desde `/register` después del primer deploy.
+Regístrate con tu cuenta real desde `/register` y elimina el admin seed.
+
+### Deployar cambios
+
+```powershell
+fly deploy
+```
+
+Fly.io construye la imagen Docker, corre `alembic upgrade head` y reemplaza
+la instancia con zero-downtime. La app nunca se apaga (free tier).
+
+### Comandos útiles
+
+```powershell
+fly logs                          # Ver logs en tiempo real
+fly status                        # Estado de las máquinas
+fly ssh console                   # Consola dentro del contenedor
+fly secrets list                  # Ver qué secrets están configurados
+fly secrets set KEY="valor"       # Agregar o actualizar un secret
+fly scale count 1                 # Asegurar que corre solo 1 máquina
+```
 
 ## Estructura del proyecto
 
@@ -235,8 +279,9 @@ dev-hub/
 ├── tests/                   # 125 tests (pytest)
 ├── scripts/
 │   └── migrate_to_prod.py   # Migrar datos de SQLite local a producción
-├── fly.toml
-├── Dockerfile
+├── fly.toml             # Config de Fly.io (región, puerto, release command)
+├── Dockerfile           # Imagen de producción (python:3.12-slim)
+├── .dockerignore
 └── requirements.txt
 ```
 

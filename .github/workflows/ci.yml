@@ -42,7 +42,7 @@ jobs:
           node-version: "20"
           cache: npm
 
-      - name: Build Tailwind (mismo comando que el deploy de Render)
+      - name: Build Tailwind (mismo comando que el Dockerfile de producción)
         run: |
           npm ci
           npm run build:css
