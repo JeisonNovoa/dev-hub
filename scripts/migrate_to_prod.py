@@ -5,7 +5,7 @@ Las contraseñas se leen descifradas desde el SQLite local y se envían en
 texto plano a la API de producción, que las cifra con la clave de producción.
 
 Uso:
-    python scripts/migrate_to_prod.py https://tu-app.onrender.com
+    python scripts/migrate_to_prod.py https://tu-app.fly.dev
 
 Requisitos:
     - El .env local debe tener DATABASE_URL apuntando al SQLite local
@@ -163,7 +163,7 @@ def migrate(prod_url: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python scripts/migrate_to_prod.py https://tu-app.onrender.com")
+        print("Uso: python scripts/migrate_to_prod.py https://tu-app.fly.dev")
         sys.exit(1)
 
     migrate(sys.argv[1])

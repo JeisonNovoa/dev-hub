@@ -8,7 +8,7 @@ import { encryptWithPin, decryptWithPin } from './crypto.js';
 
 // URL por defecto de tu Dev Hub. Si tu instancia está en otro dominio, se puede
 // cambiar desde "configuración avanzada" en el popup (queda guardada en storage).
-const DEFAULT_API_URL = 'https://dev-hub-ogdr.onrender.com';
+const DEFAULT_API_URL = 'https://dev-hub-whry8q.fly.dev';
 
 const UNLOCK_MS = 5 * 60 * 1000;       // ventana de desbloqueo (deslizante)
 const MAX_PIN_ATTEMPTS = 5;            // intentos fallidos antes de borrar todo

@@ -95,7 +95,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/health", tags=["health"])
 def health() -> dict:
-    """Liveness barato (sin BD): lo usa el keep-alive que evita que Render duerma."""
+    """Liveness barato (sin BD): usado por monitores externos y health checks de Fly.io."""
     return {"ok": True}
 
 # Auth — rutas públicas (login, register, logout)

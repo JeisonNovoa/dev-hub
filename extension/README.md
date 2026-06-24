@@ -12,7 +12,7 @@ Funciona en Chrome, Edge y Brave. **Costo: $0** (se usa en modo desarrollador).
 5. Aparece "Dev Hub — Autofill" en la lista. Opcional: fija el ícono desde el
    menú de extensiones (puzzle) para tenerlo a mano.
 
-> Si tu Dev Hub NO está en `*.onrender.com` ni en `localhost:8000`, agrega tu
+> Si tu Dev Hub NO está en `*.fly.dev` ni en `localhost:8000`, agrega tu
 > dominio en `host_permissions` dentro de `manifest.json` y recarga la extensión.
 
 ## Cómo conectarla (una sola vez)

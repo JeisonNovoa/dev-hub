@@ -9,7 +9,7 @@ con la clave actual.
 
 Uso apuntando a producción (PowerShell):
     $env:DATABASE_URL        = "postgresql+psycopg2://...supabase..."
-    $env:ENCRYPTION_KEY      = "<clave ACTUAL de produccion (Render)>"
+    $env:ENCRYPTION_KEY      = "<clave ACTUAL de produccion (Fly.io)>"
     $env:OLD_ENCRYPTION_KEYS = "<clave vieja, p. ej. la de tu .env local>"
     .venv\\Scripts\\python scripts/reencrypt_credentials.py --dry-run
     .venv\\Scripts\\python scripts/reencrypt_credentials.py

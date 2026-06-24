@@ -63,7 +63,7 @@ Documentación interactiva en `/docs` (Swagger UI).
 | Estilos | Tailwind CSS compilado (dark mode) |
 | Cifrado | Fernet (cryptography) para contraseñas + itsdangerous para sesiones |
 | Tests | pytest — 125 tests |
-| Deploy | Render + Supabase (ambos free tier) |
+| Deploy | Fly.io + Supabase (ambos free tier) |
 
 ## Cómo correrlo localmente
 
@@ -160,13 +160,13 @@ WHERE email = 'tu@email.com';
 
 Ese texto es el token cifrado: significa que la `ENCRYPTION_KEY` configurada no es la misma con la que se cifraron los datos (rotaste la clave, o la migración los dobló-cifró). Para arreglarlo:
 
-1. **Solución inmediata (sin tocar datos):** agrega la clave original en `OLD_ENCRYPTION_KEYS` (en Render → Environment). La app descifrará con ella como fallback. La clave original suele ser la `ENCRYPTION_KEY` de tu `.env` local si migraste los datos desde local.
+1. **Solución inmediata (sin tocar datos):** agrega la clave original en `OLD_ENCRYPTION_KEYS` (en Fly.io → Secrets). La app descifrará con ella como fallback. La clave original suele ser la `ENCRYPTION_KEY` de tu `.env` local si migraste los datos desde local.
 
 2. **Solución permanente:** re-cifra todo con la clave actual apuntando a la BD de producción:
 
 ```powershell
 $env:DATABASE_URL        = "postgresql+psycopg2://...supabase..."
-$env:ENCRYPTION_KEY      = "<clave ACTUAL de Render>"
+$env:ENCRYPTION_KEY      = "<clave ACTUAL de Fly.io>"
 $env:OLD_ENCRYPTION_KEYS = "<clave original>"
 .venv\Scripts\python scripts/reencrypt_credentials.py --dry-run   # previsualizar
 .venv\Scripts\python scripts/reencrypt_credentials.py             # aplicar
@@ -190,15 +190,15 @@ El script reporta cuáles credenciales quedaron irrecuperables (si ninguna clave
 .venv\Scripts\python -m alembic revision --autogenerate -m "descripcion"
 ```
 
-## Deploy en Render + Supabase
+## Deploy en Fly.io + Supabase
 
 1. Crear proyecto en [Supabase](https://supabase.com) y copiar la URL del **Session Pooler** (puerto 5432)
-2. Subir el repo a GitHub y conectar en [render.com](https://render.com) como Web Service
-3. En Render → Environment, configurar:
+2. Subir el repo a GitHub y conectar en [fly.io](https://fly.io) como Web Service
+3. En Fly.io → Secrets (o en el formulario inicial), configurar:
    - `DATABASE_URL` → URL de Supabase Session Pooler con `+psycopg2`
    - `ENCRYPTION_KEY` → genera una nueva con el comando de arriba
    - `SECRET_KEY` → genera una nueva con el comando de arriba
-4. El `render.yaml` ya tiene el build command (`alembic upgrade head` incluido) y el start command
+4. El `fly.toml` y el `Dockerfile` ya tienen todo configurado — Alembic corre automáticamente en cada deploy
 
 La primera migración crea un usuario admin seed:
 - Email: `admin@devhub.local`
@@ -235,7 +235,8 @@ dev-hub/
 ├── tests/                   # 125 tests (pytest)
 ├── scripts/
 │   └── migrate_to_prod.py   # Migrar datos de SQLite local a producción
-├── render.yaml
+├── fly.toml
+├── Dockerfile
 └── requirements.txt
 ```
 
