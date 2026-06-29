@@ -23,6 +23,35 @@
     </div>
   </section>
 
+  <!-- Conectar Claude Code / MCP -->
+  <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
+    <div class="px-5 py-3 border-b border-surface-border">
+      <h2 class="text-xs font-mono font-semibold text-gray-500 uppercase tracking-widest">conectar claude code / mcp</h2>
+    </div>
+    <div class="px-5 py-4">
+      <p class="text-sm text-gray-400 mb-3">
+        Genera un token para que <span class="text-gray-200">Claude Code</span> lea y escriba en tu Dev Hub
+        vía el servidor MCP. El token reemplaza tener que correr <code class="font-mono text-xs text-accent bg-surface rounded px-1.5 py-0.5">curl</code> a mano.
+      </p>
+      <form hx-post="/ui/extension/tokens/generate"
+            hx-target="#token-output"
+            hx-swap="innerHTML"
+            class="flex items-center gap-2">
+        <input type="text" name="name" value="Claude Code" maxlength="100"
+               placeholder="Nombre del token"
+               class="flex-1 bg-surface border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-accent/50 transition-colors font-mono" />
+        <button type="submit"
+                class="shrink-0 flex items-center gap-1.5 text-[13.5px] px-4 py-2 rounded-lg bg-accent text-black font-semibold hover:bg-accent-dim transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+          </svg>
+          Generar token
+        </button>
+      </form>
+    </div>
+    <div id="token-output"></div>
+  </section>
+
   <!-- Tokens activos -->
   <section class="bg-surface-card/60 backdrop-blur-md border border-surface-border rounded-xl overflow-hidden shadow-sm">
     <div class="px-5 py-3 border-b border-surface-border">

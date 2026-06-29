@@ -8,19 +8,19 @@ El único endpoint que expone contraseñas en claro es /credentials/{id}/secret.
 import logging
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
-from app.auth import generate_extension_token, hash_extension_token, verify_password, verify_totp_for_user
+from app.auth import hash_extension_token, verify_password, verify_totp_for_user
 from app.database import get_db
 from app.dependencies import _as_utc, get_current_user, get_user_from_extension_token
 from app.limiter import limiter
 from app.models import Credential, ExtensionToken, User
-from app.models.extension_token import DEFAULT_TOKEN_TTL_DAYS, MAX_ACTIVE_TOKENS
 from app.services import credentials as cred_service
+from app.services import extension_tokens as ext_token_service
 from app.utils.url import domains_match, extract_domain
 
 router = APIRouter()
@@ -133,34 +133,8 @@ def extension_login(
             raise HTTPException(status_code=401, detail="Código 2FA incorrecto")
         # Si usó recovery, ya quedó persistido por use_recovery_code.
 
-    token = generate_extension_token()
-    # Limite de tokens activos: si el usuario ya tiene MAX_ACTIVE_TOKENS,
-    # revocamos el más viejo (FIFO) antes de crear el nuevo.
-    active = (
-        db.query(ExtensionToken)
-        .filter(
-            ExtensionToken.user_id == user.id,
-            ExtensionToken.revoked_at.is_(None),
-            ExtensionToken.expires_at > datetime.now(timezone.utc),
-        )
-        .order_by(ExtensionToken.created_at.asc())
-        .all()
-    )
-    if len(active) >= MAX_ACTIVE_TOKENS:
-        for old in active[: len(active) - MAX_ACTIVE_TOKENS + 1]:
-            old.revoked_at = datetime.now(timezone.utc)
-            logger.info("Token viejo revocado por FIFO user_id=%s id=%d", user.id, old.id)
-    expires_at = datetime.now(timezone.utc) + timedelta(days=DEFAULT_TOKEN_TTL_DAYS)
-    db.add(
-        ExtensionToken(
-            user_id=user.id,
-            token_hash=hash_extension_token(token),
-            name=data.name,
-            expires_at=expires_at,
-        )
-    )
+    token, expires_at = ext_token_service.create_token(db, user, data.name)
     db.commit()
-    logger.info("Token de extensión creado para user_id=%s (%s)", user.id, data.name)
     return {"token": token, "email": user.email, "expires_at": expires_at.isoformat()}
 
 
