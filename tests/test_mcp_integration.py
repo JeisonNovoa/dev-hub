@@ -15,8 +15,22 @@ from pathlib import Path
 
 import pytest
 
+
+def _mcp_sdk_available() -> bool:
+    """True solo si el SDK de MCP está realmente instalado.
+
+    OJO: no basta con find_spec("mcp") — la carpeta mcp/ de este repo puede
+    hacer sombra al paquete. Verificamos el submódulo real del SDK
+    (mcp.server.fastmcp), que solo existe si el paquete pip está instalado.
+    """
+    try:
+        return importlib.util.find_spec("mcp.server.fastmcp") is not None
+    except (ImportError, ModuleNotFoundError, ValueError):
+        return False
+
+
 pytestmark = pytest.mark.skipif(
-    importlib.util.find_spec("mcp") is None,
+    not _mcp_sdk_available(),
     reason="SDK de MCP no instalado",
 )
 
