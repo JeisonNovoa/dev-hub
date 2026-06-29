@@ -7,7 +7,7 @@ import pyotp
 import qrcode
 import qrcode.image.svg
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.auth import COOKIE_NAME, create_session_cookie, hash_password, verify_password, verify_totp_for_user
@@ -16,7 +16,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.jinja import templates
 from app.models import User
-from app.services.recovery_codes import regenerate_for_user, remaining_count
+from app.services.recovery_codes import regenerate_for_user
 
 MIN_PASSWORD_LEN = 8
 

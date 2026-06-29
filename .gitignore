@@ -23,6 +23,9 @@ htmlcov/
 # Node
 node_modules/
 
+# CSS compilado por Tailwind (se genera con `npm run build:css`)
+app/static/style.css
+
 # Logs
 *.log
 

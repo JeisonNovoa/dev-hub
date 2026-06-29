@@ -1,6 +1,6 @@
 """Acciones de tabla de credenciales: crear, editar, ver, guardar."""
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 

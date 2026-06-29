@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from slugify import slugify
 from sqlalchemy.orm import Session
 

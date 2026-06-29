@@ -62,7 +62,7 @@ Documentación interactiva en `/docs` (Swagger UI).
 | Frontend | Jinja2 + HTMX 2.x + Alpine.js 3.x |
 | Estilos | Tailwind CSS compilado (dark mode) |
 | Cifrado | Fernet (cryptography) para contraseñas + itsdangerous para sesiones |
-| Tests | pytest — 125 tests |
+| Tests | pytest — 328 tests |
 | Deploy | Fly.io + Supabase (ambos free tier) |
 
 ## Cómo correrlo localmente
@@ -276,7 +276,7 @@ dev-hub/
 │       ├── auth/            # login.html, register.html
 │       └── ...              # dashboard, project, credentials
 ├── alembic/                 # Migraciones
-├── tests/                   # 125 tests (pytest)
+├── tests/                   # 328 tests (pytest)
 ├── scripts/
 │   └── migrate_to_prod.py   # Migrar datos de SQLite local a producción
 ├── fly.toml             # Config de Fly.io (región, puerto, release command)

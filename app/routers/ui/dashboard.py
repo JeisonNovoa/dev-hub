@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -10,7 +10,6 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.jinja import templates
 from app.models import Project, User
-from app.models.project import TRASH_RETENTION_DAYS
 from app.routers.ui.import_project import render_import_prompt
 from app.services.search import project_search_filter
 from app.utils.slugs import unique_project_slug

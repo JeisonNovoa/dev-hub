@@ -2,7 +2,6 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.auth import COOKIE_NAME, hash_extension_token, read_session_cookie
