@@ -7,6 +7,7 @@ from app.dependencies import get_current_user, get_project_or_404
 from app.models import Command, EnvVariable, Repo, User
 from app.schemas.project import CommandCreate, CommandResponse, CommandUpdate, EnvVariableCreate, EnvVariableResponse, EnvVariableUpdate
 from app.schemas.repo import RepoCreate, RepoDetailResponse, RepoResponse, RepoUpdate
+from app.utils.activity import log_event
 
 router = APIRouter()
 
@@ -49,6 +50,7 @@ def create_repo(
         description=data.description,
     )
     db.add(repo)
+    log_event(db, project.id, "created", "repo", data.name)
     db.commit()
     db.refresh(repo)
     return repo

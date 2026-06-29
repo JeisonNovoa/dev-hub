@@ -5,6 +5,7 @@ from app.database import get_db
 from app.dependencies import get_current_user, get_project_or_404
 from app.models import EnvVariable, User
 from app.schemas.project import EnvVariableCreate, EnvVariableResponse, EnvVariableUpdate
+from app.utils.activity import log_event
 
 router = APIRouter()
 
@@ -38,6 +39,7 @@ def create_env_var(
     project = get_project_or_404(slug, db, current_user)
     env_var = EnvVariable(project_id=project.id, key=data.key, value=data.value, description=data.description)
     db.add(env_var)
+    log_event(db, project.id, "created", "env_var", data.key)
     db.commit()
     db.refresh(env_var)
     return env_var

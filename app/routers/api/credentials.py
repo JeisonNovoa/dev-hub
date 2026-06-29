@@ -14,7 +14,12 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("", response_model=Page[CredentialResponse])
+@router.get(
+    "",
+    response_model=Page[CredentialResponse],
+    summary="Listar credenciales",
+    description="Lista paginada de credenciales del usuario, con filtros por proyecto, categoría y búsqueda. No incluye contraseñas en claro salvo el campo cifrado.",
+)
 def list_credentials(
     project_id: int | None = None,
     category: str | None = None,
@@ -42,7 +47,13 @@ def list_credentials(
     return Page(items=items, total=total, limit=limit, offset=offset)
 
 
-@router.post("", response_model=CredentialResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=CredentialResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear credencial",
+    description="Guarda una credencial. La contraseña se cifra en reposo (Fernet). Puede asociarse a un proyecto o servicio.",
+)
 def create_credential(
     data: CredentialCreate,
     db: Session = Depends(get_db),

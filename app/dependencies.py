@@ -22,15 +22,64 @@ def _as_utc(dt: datetime) -> datetime:
     return dt
 
 
-def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+def _user_from_session_cookie(request: Request, db: Session) -> User | None:
+    """Valida la cookie de sesión. Devuelve el User o None si no hay/no vale."""
     token = request.cookies.get(COOKIE_NAME)
-    if token:
-        session = read_session_cookie(token)
-        if session is not None:
-            user_id, iat = session
-            user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
-            if user and _session_still_valid(iat, user):
-                return user
+    if not token:
+        return None
+    session = read_session_cookie(token)
+    if session is None:
+        return None
+    user_id, iat = session
+    user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
+    if user and _session_still_valid(iat, user):
+        return user
+    return None
+
+
+def _user_from_bearer_token(request: Request, db: Session) -> User | None:
+    """Valida el header Authorization: Bearer <token> de extensión.
+
+    Devuelve el User si el token existe, no está revocado ni expirado y el
+    usuario está activo; None en cualquier otro caso. No lanza: los callers
+    deciden qué hacer ante un fallo. Registra last_used_at en cada uso válido.
+    """
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth[len("Bearer "):].strip()
+    record = (
+        db.query(ExtensionToken)
+        .filter(
+            ExtensionToken.token_hash == hash_extension_token(token),
+            ExtensionToken.revoked_at.is_(None),
+        )
+        .first()
+    )
+    if not record:
+        return None
+    if _as_utc(record.expires_at) <= datetime.now(timezone.utc):
+        return None
+    user = db.query(User).filter(User.id == record.user_id, User.is_active.is_(True)).first()
+    if not user:
+        return None
+    record.last_used_at = datetime.now(timezone.utc)
+    db.commit()
+    return user
+
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    """Autentica vía cookie de sesión o, como fallback, token Bearer de extensión.
+
+    El doble mecanismo permite que tanto el navegador (cookie) como Claude Code /
+    el servidor MCP (token Bearer) usen toda la API /api/* con la misma dependencia.
+    """
+    user = _user_from_session_cookie(request, db)
+    if user is not None:
+        return user
+    user = _user_from_bearer_token(request, db)
+    if user is not None:
+        return user
     # Para peticiones HTMX devolvemos un header HX-Redirect en vez de 302 estándar
     if request.headers.get("HX-Request"):
         raise HTTPException(
@@ -71,34 +120,17 @@ def _session_still_valid(iat: int, user: User) -> bool:
 
 
 def get_user_from_extension_token(request: Request, db: Session = Depends(get_db)) -> User:
-    """Autentica peticiones de la extensión vía header Authorization: Bearer <token>.
+    """Exige un token Bearer de extensión válido (endpoints /api/extension/*).
 
-    Rechaza tokens revocados o expirados. Un token expirado no se borra: queda
-    en BD para auditoría, pero deja de aceptar peticiones.
+    A diferencia de get_current_user, NO acepta cookie de sesión: la extensión
+    solo tiene el token. Lanza 401 si falta o no vale.
     """
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
+    if not request.headers.get("Authorization", "").startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Token de extensión requerido")
-    token = auth[len("Bearer "):].strip()
-    record = (
-        db.query(ExtensionToken)
-        .filter(
-            ExtensionToken.token_hash == hash_extension_token(token),
-            ExtensionToken.revoked_at.is_(None),
-        )
-        .first()
-    )
-    if not record:
-        logger.warning("Token de extensión inválido o revocado")
-        raise HTTPException(status_code=401, detail="Token inválido o revocado")
-    if _as_utc(record.expires_at) <= datetime.now(timezone.utc):
-        logger.warning("Token de extensión expirado: id=%d user=%d", record.id, record.user_id)
-        raise HTTPException(status_code=401, detail="Token expirado, vuelve a iniciar sesión")
-    user = db.query(User).filter(User.id == record.user_id, User.is_active.is_(True)).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="Usuario inactivo")
-    record.last_used_at = datetime.now(timezone.utc)
-    db.commit()
+    user = _user_from_bearer_token(request, db)
+    if user is None:
+        logger.warning("Token de extensión inválido, revocado o expirado")
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
     return user
 
 

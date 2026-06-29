@@ -11,7 +11,9 @@ from app.config import settings
 from app.limiter import limiter
 from app.logging_config import configure_logging
 from app.middleware.csrf import CSRF_COOKIE, CsrfMiddleware, generate_csrf_token, set_csrf_cookie
-from app.routers.api import commands, credentials, env_vars, export, extension, links, me, projects, repos, services
+from app.routers.api import commands, context, credentials, env_vars, export, extension, links, me, projects, repos
+from app.routers.api import search as api_search
+from app.routers.api import services
 from app.routers.ui import auth as ui_auth
 from app.routers.ui import credentials as ui_credentials
 from app.routers.ui import dashboard, project as ui_project, trash as ui_trash
@@ -158,6 +160,8 @@ app.include_router(services.router, prefix="/api/services", tags=["services"])
 app.include_router(credentials.router, prefix="/api/credentials", tags=["credentials"])
 app.include_router(me.router, prefix="/api/me", tags=["me"])
 app.include_router(export.router, prefix="/api/export", tags=["export"])
+app.include_router(context.router, prefix="/api/context", tags=["context"])
+app.include_router(api_search.router, prefix="/api/lookup", tags=["lookup"])
 app.include_router(extension.router, prefix="/api/extension", tags=["extension"])
 
 # UI routers — devuelven HTML

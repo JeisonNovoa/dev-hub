@@ -15,9 +15,11 @@ casos (algunos navegadores viejos, subdominios, navegación con GET
 "mutante"). El doble-submit cierra esos huecos.
 
 Exclusiones:
-- `/api/extension/*` se autentica por Bearer token, no por cookie. CSRF no
-  aplica porque no hay cookie que forzar.
-- `/health` no muta estado.
+- Cualquier petición con header `Authorization: Bearer ...` (extensión, MCP,
+  Claude Code). CSRF no aplica: el token no lo manda el navegador de forma
+  ambiental, así que un sitio cross-site no puede reproducirlo. Esto habilita
+  toda la API /api/* para clientes con token, no solo /api/extension/*.
+- `/api/extension/*` (por prefijo, además del Bearer) y `/health`, que no muta.
 - LOGIN/REGISTER mismos: la cookie CSRF se setea al cargar la página GET,
   antes de enviar el POST, así que sí aplica la verificación.
 """
@@ -82,7 +84,11 @@ class CsrfMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         path = request.url.path
         is_unsafe = request.method in _UNSAFE_METHODS
-        is_exempt = any(path.startswith(p) for p in _EXEMPT_PREFIXES)
+        # Las peticiones con Bearer token no son vulnerables a CSRF: el token no
+        # se envía de forma ambiental como una cookie, así que el doble-submit
+        # no aporta nada y solo bloquearía a clientes legítimos (MCP/Claude).
+        has_bearer = request.headers.get("Authorization", "").startswith("Bearer ")
+        is_exempt = has_bearer or any(path.startswith(p) for p in _EXEMPT_PREFIXES)
 
         if is_unsafe and not is_exempt:
             cookie_token = request.cookies.get(CSRF_COOKIE)

@@ -6,6 +6,7 @@ from app.dependencies import get_current_user
 from app.models import Service, User
 from app.schemas.pagination import Page
 from app.schemas.service import ServiceCreate, ServiceResponse, ServiceUpdate
+from app.utils.activity import log_event
 
 router = APIRouter()
 
@@ -49,6 +50,10 @@ def create_service(
         user_id=current_user.id,
     )
     db.add(service)
+    # Solo registramos actividad si el servicio está asociado a un proyecto
+    # (el timeline es por-proyecto; un servicio global no tiene dónde figurar).
+    if data.project_id is not None:
+        log_event(db, data.project_id, "created", "service", data.name)
     db.commit()
     db.refresh(service)
     return service

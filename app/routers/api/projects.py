@@ -12,12 +12,18 @@ from app.schemas.pagination import Page
 from app.schemas.project import ProjectCreate, ProjectDetailResponse, ProjectResponse, ProjectUpdate
 from app.services.import_project import import_project
 from app.services.search import project_search_filter
+from app.utils.activity import log_event
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("", response_model=Page[ProjectResponse])
+@router.get(
+    "",
+    response_model=Page[ProjectResponse],
+    summary="Listar proyectos",
+    description="Lista paginada de los proyectos del usuario, con filtro opcional por status y búsqueda por texto.",
+)
 def list_projects(
     status: str | None = None,
     search: str | None = None,
@@ -36,7 +42,13 @@ def list_projects(
     return Page(items=items, total=total, limit=limit, offset=offset)
 
 
-@router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ProjectResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear proyecto",
+    description="Registra un proyecto nuevo. El slug se deriva del nombre si no se provee.",
+)
 def create_project(
     data: ProjectCreate,
     db: Session = Depends(get_db),
@@ -59,13 +71,15 @@ def create_project(
         user_id=current_user.id,
     )
     db.add(project)
+    db.flush()  # asegura project.id antes de loguear el evento
+    log_event(db, project.id, "created", "project")
     db.commit()
     db.refresh(project)
     logger.info("Proyecto creado: '%s' (id=%d)", project.slug, project.id)
     return project
 
 
-@router.post("/import", status_code=status.HTTP_201_CREATED)
+@router.post("/import", status_code=status.HTTP_201_CREATED, summary="Importar proyecto desde JSON")
 def import_project_endpoint(
     raw: dict = Body(..., description="JSON generado por la IA con la estructura de ProjectImport"),
     db: Session = Depends(get_db),
@@ -88,7 +102,12 @@ def import_project_endpoint(
     }
 
 
-@router.get("/{slug}", response_model=ProjectDetailResponse)
+@router.get(
+    "/{slug}",
+    response_model=ProjectDetailResponse,
+    summary="Detalle de un proyecto",
+    description="Devuelve un proyecto con sus env vars, comandos y links. Para el contexto completo en markdown usa /api/context/{slug}.",
+)
 def get_project(
     slug: str,
     db: Session = Depends(get_db),

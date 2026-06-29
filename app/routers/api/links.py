@@ -5,6 +5,7 @@ from app.database import get_db
 from app.dependencies import get_current_user, get_project_or_404
 from app.models import QuickLink, User
 from app.schemas.project import QuickLinkCreate, QuickLinkResponse, QuickLinkUpdate
+from app.utils.activity import log_event
 
 router = APIRouter()
 
@@ -38,6 +39,7 @@ def create_link(
     project = get_project_or_404(slug, db, current_user)
     link = QuickLink(project_id=project.id, label=data.label, url=data.url, category=data.category)
     db.add(link)
+    log_event(db, project.id, "created", "link", data.label)
     db.commit()
     db.refresh(link)
     return link

@@ -5,6 +5,7 @@ from app.database import get_db
 from app.dependencies import get_current_user, get_project_or_404
 from app.models import Command, User
 from app.schemas.project import CommandCreate, CommandResponse, CommandUpdate
+from app.utils.activity import log_event
 
 router = APIRouter()
 
@@ -44,6 +45,7 @@ def create_command(
         type=data.type,
     )
     db.add(cmd)
+    log_event(db, project.id, "created", "command", data.label)
     db.commit()
     db.refresh(cmd)
     return cmd
