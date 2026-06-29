@@ -283,14 +283,9 @@ def test_expired_token_rejected(client, ext_token, db):
     from datetime import datetime, timedelta, timezone
     from app.models import ExtensionToken
 
-    # Forzar expiración del token creado por el fixture
-    record = (
-        db.query(ExtensionToken)
-        .filter(ExtensionToken.token_hash.startswith("a"))
-        .first()
-    )
-    # Buscar por hash real del token en claro no es posible; mejor:
-    # traer el más reciente del usuario test@devhub.local y vencerlo.
+    # Forzar expiración del token creado por el fixture.
+    # No se puede buscar por el hash del token en claro; traemos el más
+    # reciente del usuario test@devhub.local y lo vencemos.
     from app.models import User
     user = db.query(User).filter(User.email == "test@devhub.local").first()
     rec = (

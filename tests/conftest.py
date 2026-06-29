@@ -78,7 +78,7 @@ def auth_user(db):
     return user
 
 
-def _make_client(db, cookies: dict | None = None) -> TestClient:
+def _make_client(db, cookies: dict | None = None, raise_server_exceptions: bool = True) -> TestClient:
     def override_get_db():
         try:
             yield db
@@ -90,7 +90,13 @@ def _make_client(db, cookies: dict | None = None) -> TestClient:
     csrf = generate_csrf_token()
     merged_cookies = dict(cookies or {})
     merged_cookies[CSRF_COOKIE] = csrf
-    client = TestClient(app, cookies=merged_cookies)
+    # raise_server_exceptions=False deja que el exception handler global
+    # produzca la respuesta 500 en vez de propagar la excepción al test.
+    client = TestClient(
+        app,
+        cookies=merged_cookies,
+        raise_server_exceptions=raise_server_exceptions,
+    )
     # Interceptar el request para inyectar el header X-CSRFToken en métodos
     # no seguros (igual que hace app.js en el navegador).
     _original_request = client.request
@@ -119,5 +125,19 @@ def client(db, auth_user):
 def unauth_client(db):
     """Cliente sin sesión — úsalo en tests de redirección / auth."""
     with _make_client(db) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def raising_client(db, auth_user):
+    """Cliente autenticado que NO propaga excepciones del servidor.
+
+    Deja que el exception handler global devuelva la respuesta 500 real, en vez
+    de re-lanzar la excepción dentro del test. Úsalo solo para probar el manejo
+    de errores 500.
+    """
+    cookies = {COOKIE_NAME: create_session_cookie(auth_user.id)}
+    with _make_client(db, cookies, raise_server_exceptions=False) as c:
         yield c
     app.dependency_overrides.clear()
