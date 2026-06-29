@@ -10,7 +10,7 @@ Uso:
 
 import sys
 
-import server
+from client import base_url, request
 
 # Fuerza salida UTF-8 (la consola de Windows usa cp1252 y rompería con tildes).
 if hasattr(sys.stdout, "reconfigure"):
@@ -18,9 +18,10 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 def main() -> int:
-    print(f"Base URL: {server._base_url()}")
+    print(f"Base URL: {base_url()}")
     try:
-        projects = server.list_projects()
+        data = request("GET", "/api/projects")
+        projects = data["items"] if isinstance(data, dict) else data
     except Exception as exc:  # noqa: BLE001 - smoke test, queremos el mensaje crudo
         print(f"FALLO al listar proyectos: {exc}")
         return 1
@@ -32,14 +33,15 @@ def main() -> int:
     if projects:
         slug = projects[0]["slug"]
         try:
-            ctx = server.get_context(slug)
+            ctx = request("GET", f"/api/context/{slug}")
             print(f"OK get_context('{slug}') -> {len(ctx)} chars de markdown")
         except Exception as exc:  # noqa: BLE001
             print(f"FALLO get_context: {exc}")
             return 1
 
     try:
-        events = server.recent_activity()
+        events = request("GET", "/api/context/recent")
+        events = events["events"] if isinstance(events, dict) else events
         print(f"OK recent_activity -> {len(events)} evento(s)")
     except Exception as exc:  # noqa: BLE001
         print(f"FALLO recent_activity: {exc}")

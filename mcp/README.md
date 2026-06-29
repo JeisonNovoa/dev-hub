@@ -5,15 +5,28 @@ hub directamente, sin copiar JSON a mano.
 
 ## Qué puede hacer Claude con esto
 
+28 tools con CRUD completo sobre tu Dev Hub. Política: crear y actualizar todo;
+los borrados de proyectos y credenciales van a la papelera (soft-delete). Nunca
+expone contraseñas en claro.
+
+**Lectura y búsqueda**
+
 | Tool | Qué hace |
 |------|----------|
 | `list_projects` | Lista tus proyectos (filtra por status o texto) |
-| `get_context` | Trae el contexto completo de un proyecto en markdown |
+| `get_context` | Contexto completo de un proyecto en markdown |
+| `get_project` | Detalle JSON de un proyecto |
+| `list_services` / `list_credentials` | Lista servicios / credenciales |
 | `search` | Busca across proyectos, credenciales y servicios |
-| `recent_activity` | Muestra en qué estuviste trabajando últimamente |
-| `register_project` | Registra un proyecto nuevo |
-| `add_env_var` | Agrega una variable de entorno a un proyecto |
-| `add_command` | Agrega un comando a un proyecto |
+| `recent_activity` | En qué estuviste trabajando últimamente |
+
+**Proyectos** — `register_project`, `update_project`, `delete_project`
+
+**Dentro de un proyecto** — `add/update/delete` para `command`, `env_var`, `link`, `repo`
+
+**Servicios** — `add_service`, `update_service`, `delete_service`
+
+**Credenciales** — `add_credential`, `update_credential`, `delete_credential`
 
 ## Instalación
 
@@ -28,7 +41,7 @@ python -m venv .venv
 
 El servidor se autentica con un **token de extensión** de Dev Hub:
 
-1. Entra a la web → **Seguridad → Tokens de extensión → generar**, o
+1. Entra a la web → **Extensión → conectar Claude Code / MCP → Generar token**, o
 2. Pídelo por API:
    ```bash
    curl -X POST https://dev-hub-whry8q.fly.dev/api/extension/login \
