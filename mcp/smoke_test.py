@@ -12,6 +12,10 @@ import sys
 
 import server
 
+# Fuerza salida UTF-8 (la consola de Windows usa cp1252 y rompería con tildes).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 
 def main() -> int:
     print(f"Base URL: {server._base_url()}")
@@ -21,7 +25,7 @@ def main() -> int:
         print(f"FALLO al listar proyectos: {exc}")
         return 1
 
-    print(f"OK list_projects → {len(projects)} proyecto(s)")
+    print(f"OK list_projects -> {len(projects)} proyecto(s)")
     for p in projects[:5]:
         print(f"  - {p['name']} ({p['slug']}) [{p['status']}]")
 
@@ -29,19 +33,19 @@ def main() -> int:
         slug = projects[0]["slug"]
         try:
             ctx = server.get_context(slug)
-            print(f"OK get_context('{slug}') → {len(ctx)} chars de markdown")
+            print(f"OK get_context('{slug}') -> {len(ctx)} chars de markdown")
         except Exception as exc:  # noqa: BLE001
             print(f"FALLO get_context: {exc}")
             return 1
 
     try:
         events = server.recent_activity()
-        print(f"OK recent_activity → {len(events)} evento(s)")
+        print(f"OK recent_activity -> {len(events)} evento(s)")
     except Exception as exc:  # noqa: BLE001
         print(f"FALLO recent_activity: {exc}")
         return 1
 
-    print("\nSmoke test OK ✓")
+    print("\nSmoke test OK")
     return 0
 
 
