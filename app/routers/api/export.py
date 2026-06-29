@@ -49,7 +49,7 @@ def export_all(
         project_dict = ProjectResponse.model_validate(p).model_dump()
         project_dict["env_vars"] = [EnvVariableResponse.model_validate(ev).model_dump() for ev in p.env_vars]
         project_dict["commands"] = [CommandResponse.model_validate(c).model_dump() for c in p.commands]
-        project_dict["links"] = [QuickLinkResponse.model_validate(l).model_dump() for l in p.links]
+        project_dict["links"] = [QuickLinkResponse.model_validate(lnk).model_dump() for lnk in p.links]
         project_dict["repos"] = [RepoDetailResponse.model_validate(r).model_dump() for r in p.repos]
         projects_data.append(project_dict)
 

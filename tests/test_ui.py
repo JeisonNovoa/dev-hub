@@ -322,7 +322,6 @@ def test_service_edit_form(client):
     client.post(f"/ui/projects/{slug}/services/new", data={
         "name": "Neon DB", "category": "database", "url": "", "notes": ""
     })
-    project = client.get(f"/api/projects/{slug}").json()
     services = client.get("/api/services").json()["items"]
     service_id = services[0]["id"]
     res = client.get(f"/ui/projects/{slug}/services/{service_id}/edit")

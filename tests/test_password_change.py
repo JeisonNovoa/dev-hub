@@ -124,7 +124,7 @@ def test_old_session_cookie_invalidated_after_password_change(auth_user, db):
 
 def test_session_cookie_with_backdated_iat_rejected(auth_user, db):
     """Si iat < password_changed_at, la cookie se rechaza."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timezone
     auth_user.password_changed_at = datetime.now(timezone.utc)
     db.commit()
     # Cookie con iat actual; password_changed_at es el mismo momento. Pasará

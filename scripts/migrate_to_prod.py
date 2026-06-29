@@ -155,7 +155,7 @@ def migrate(prod_url: str) -> None:
         })
 
     db.close()
-    print(f"\nMigracion completa.")
+    print("\nMigracion completa.")
     print(f"  Proyectos migrados : {len(project_id_map)}")
     print(f"  Servicios migrados : {len(service_id_map)}")
     print(f"  Credenciales       : {len(credentials)}")

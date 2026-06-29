@@ -68,6 +68,26 @@ async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONR
     )
 
 
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    """Atrapa cualquier excepción no-HTTP para no exponer el traceback.
+
+    Loguea el error completo en el servidor (con stack), pero al cliente solo
+    le devuelve un mensaje genérico: un fragmento HTML para HTMX (así la UI
+    muestra un aviso en vez de romperse) y JSON para el resto.
+    """
+    logger.exception("Error no controlado en %s %s", request.method, request.url.path)
+    if request.headers.get("HX-Request"):
+        return HTMLResponse(
+            '<p class="text-red-400 text-sm font-mono px-2">'
+            "Ocurrió un error. Recarga la página e intenta de nuevo.</p>",
+            status_code=500,
+        )
+    return JSONResponse(
+        {"detail": "Error interno del servidor. Intenta de nuevo más tarde."},
+        status_code=500,
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.database import SessionLocal
@@ -85,6 +105,7 @@ app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+app.add_exception_handler(Exception, _unhandled_exception_handler)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CsrfMiddleware)
 
@@ -97,6 +118,32 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 def health() -> dict:
     """Liveness barato (sin BD): usado por monitores externos y health checks de Fly.io."""
     return {"ok": True}
+
+
+@app.get("/health/ready", tags=["health"])
+def health_ready() -> JSONResponse:
+    """Readiness: verifica que la BD responde (SELECT 1).
+
+    A diferencia de /health, distingue "el proceso vive" de "el proceso puede
+    atender". Si Supabase está caído, devuelve 503 para que un monitor externo
+    lo detecte en vez de ver la app como sana mientras los usuarios reciben 500.
+    """
+    from sqlalchemy import text
+
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+        return JSONResponse({"ok": True, "database": "ok"})
+    except Exception:
+        logger.exception("Health check de readiness falló: la BD no responde")
+        return JSONResponse(
+            {"ok": False, "database": "error"},
+            status_code=503,
+        )
+    finally:
+        db.close()
 
 # Auth — rutas públicas (login, register, logout)
 app.include_router(ui_auth.router)
